@@ -252,13 +252,13 @@ export default {
 
   .text {
     max-width: 100%;
-    .mixin-ellipsis-1;
+    .mixin-ellipsis-1();
   }
 
   .albumName {
     font-size: 12px;
     opacity: 0.6;
-    // .mixin-ellipsis-1;
+    // .mixin-ellipsis-1();
   }
 
   .label {
@@ -355,7 +355,7 @@ export default {
     }
 
     .name {
-      .mixin-ellipsis;
+      .mixin-ellipsis();
     }
 
     .label {
@@ -373,7 +373,7 @@ export default {
     .singer {
       // font-size: 0.9em;
       color: var(--color-font-label);
-      .mixin-ellipsis;
+      .mixin-ellipsis();
     }
   }
 
@@ -386,7 +386,7 @@ export default {
     // line-height: 36px;
     // padding: 0 10px !important;
     min-width: 70px;
-    // .mixin-ellipsis-1;
+    // .mixin-ellipsis-1();
 
     +.btn {
       margin-left: 10px;

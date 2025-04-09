@@ -183,6 +183,6 @@ const handleSubmit = () => {
   // line-height: 36px;
   // padding: 0 10px !important;
   min-width: 80px;
-  // .mixin-ellipsis-1;
+  // .mixin-ellipsis-1();
 }
 </style>

@@ -283,7 +283,7 @@ export default {
   }
 
   // &:before {
-  //   .mixin-after;
+  //   .mixin-after();
   //   position: absolute;
   //   left: 0;
   //   top: 0;

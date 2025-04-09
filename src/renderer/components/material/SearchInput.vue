@@ -319,7 +319,7 @@ export default {
       transition: background-color 0.2s ease;
       line-height: 1.3;
       span {
-        .mixin-ellipsis-2;
+        .mixin-ellipsis-2();
       }
 
       &.select {

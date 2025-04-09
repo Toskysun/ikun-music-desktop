@@ -106,7 +106,7 @@ export default {
   position: relative;
   padding: 8px 0;
   &:after {
-    .mixin-after;
+    .mixin-after();
     left: 0;
     bottom: 0;
     width: 100%;

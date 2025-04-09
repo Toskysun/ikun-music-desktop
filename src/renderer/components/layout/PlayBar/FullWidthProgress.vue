@@ -202,7 +202,7 @@ export default {
   }
 
   &:before {
-    .mixin-after;
+    .mixin-after();
     left: 0;
     top: 0;
     width: 100%;
@@ -295,12 +295,12 @@ export default {
   max-width: 100%;
   font-size: 12px;
   color: var(--color-font-label);
-  .mixin-ellipsis-1;
+  .mixin-ellipsis-1();
 }
 .status {
   padding-top: 3px;
   height: 23px;
-  .mixin-ellipsis-1;
+  .mixin-ellipsis-1();
   max-width: 100%;
 }
 
