@@ -14,7 +14,7 @@ import { openDirInExplorer } from '@common/utils/electron'
 
 export const initGlobalData = () => {
   const envParams = parseEnvParams()
-  envParams.cmdParams.dt = !!envParams.cmdParams.dt
+  // envParams.cmdParams.dt = !!envParams.cmdParams.dt
 
   global.envParams = {
     cmdParams: envParams.cmdParams,
@@ -289,6 +289,7 @@ export const initAppSetting = async () => {
         log.error(err)
       })
     initTheme()
+    if (envParams.cmdParams.dt == null) envParams.cmdParams.dt = global.lx.appSetting['common.transparentWindow']
   }
   // global.lx.theme = getTheme()
 
