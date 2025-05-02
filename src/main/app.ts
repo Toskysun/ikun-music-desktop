@@ -289,7 +289,7 @@ export const initAppSetting = async () => {
         log.error(err)
       })
     initTheme()
-    if (envParams.cmdParams.dt == null) envParams.cmdParams.dt = global.lx.appSetting['common.transparentWindow']
+    if (envParams.cmdParams.dt == null) envParams.cmdParams.dt = !global.lx.appSetting['common.transparentWindow']
   }
   // global.lx.theme = getTheme()
 
