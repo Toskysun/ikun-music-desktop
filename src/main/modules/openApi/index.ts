@@ -118,62 +118,103 @@ const handleStartServer = async (port: number, ip: string) =>
         //           console.log('Connection opened')
         //       });
 
-        //       subscription.addEventListener('error', (err) => {
-        //           console.error(err)
-        //       });
-        //       subscription.addEventListener('lyricLineText', (event) => {
-        //           console.log(event.data)
-        //       });
-        //       subscription.addEventListener('progress', (event) => {
-        //           console.log(event.data)
-        //       });
-        //       subscription.addEventListener('name', (event) => {
-        //           console.log(event.data)
-        //       });
-        //       subscription.addEventListener('singer', (event) => {
-        //           console.log(event.data)
-        //       });
-        //       </script>
-        //     </body>
-        //   </html>`
-        //   break
-        case '/lyric':
-          msg = global.lx.player_status.lyric
-          break
-        case '/play':
-          sendTaskbarButtonClick('play')
-          break
-        case '/pause':
-          sendTaskbarButtonClick('pause')
-          break
-        case '/skip-next':
-          sendTaskbarButtonClick('next')
-          break
-        case '/skip-prev':
-          sendTaskbarButtonClick('prev')
-          break
-        case '/collect':
-          sendTaskbarButtonClick('collect')
-          break
-        case '/uncollect':
-          sendTaskbarButtonClick('unCollect')
-          break
-        case '/subscribe-player-status':
-          try {
-            handleSubscribePlayerStatus(req, res, query)
-            return
-          } catch (err) {
-            console.log(err)
-            code = 500
-            msg = 'Error'
-          }
-          break
-        default:
-          code = 401
-          msg = 'Forbidden'
-          break
+      //       subscription.addEventListener('error', (err) => {
+      //           console.error(err)
+      //       });
+      //       subscription.addEventListener('lyricLineText', (event) => {
+      //           console.log(event.data)
+      //       });
+      //       subscription.addEventListener('progress', (event) => {
+      //           console.log(event.data)
+      //       });
+      //       subscription.addEventListener('name', (event) => {
+      //           console.log(event.data)
+      //       });
+      //       subscription.addEventListener('singer', (event) => {
+      //           console.log(event.data)
+      //       });
+      //       </script>
+      //     </body>
+      //   </html>`
+      //   break
+      case '/lyric':
+        msg = global.lx.player_status.lyric
+        break
+      case '/play':
+        sendTaskbarButtonClick('play')
+        break
+      case '/pause':
+        sendTaskbarButtonClick('pause')
+        break
+      case '/skip-next':
+        sendTaskbarButtonClick('next')
+        break
+      case '/skip-prev':
+        sendTaskbarButtonClick('prev')
+        break
+      case '/seek': {
+        const offset = parseFloat(querystring.parse(query ?? '').offset as string)
+        if (Number.isNaN(offset) || offset < 0 || offset > global.lx.player_status.duration) {
+          code = 400
+          msg = 'Invalid offset'
+        } else {
+          sendTaskbarButtonClick('seek', parseFloat(offset.toFixed(3)))
+        }
+        break
       }
-      sendResponse(res, code, msg)
+      case '/collect':
+        sendTaskbarButtonClick('collect')
+        break
+      case '/uncollect':
+        sendTaskbarButtonClick('unCollect')
+        break
+      case '/volume': {
+        const volume = parseInt(querystring.parse(query ?? '').volume as string)
+        if (Number.isNaN(volume) || volume < 0 || volume > 100) {
+          code = 400
+          msg = 'Invalid volume'
+        } else {
+          sendTaskbarButtonClick('volume', volume / 100)
+        }
+        break
+      }
+      case '/mute': {
+        const mute = querystring.parse(query ?? '').mute
+        if (mute == 'true') {
+          sendTaskbarButtonClick('mute', true)
+        } else if (mute == 'false') {
+          sendTaskbarButtonClick('mute', false)
+        } else {
+          code = 400
+          msg = 'Invalid mute value'
+        }
+        break
+      }
+      case '/subscribe-player-status':
+        try {
+          handleSubscribePlayerStatus(req, res, query)
+          return
+        } catch (err) {
+          console.log(err)
+          code = 500
+          msg = 'Error'
+        }
+        break
+      default:
+        code = 401
+        msg = 'Forbidden'
+        break
+    }
+    sendResponse(res, code, msg)
+  })
+  httpServer.on('error', error => {
+    console.log(error)
+    reject(error)
+  })
+  httpServer.on('connection', (socket) => {
+    sockets.add(socket)
+    socket.once('close', () => {
+      sockets.delete(socket)
     })
     httpServer.on('error', (error) => {
       console.log(error)
