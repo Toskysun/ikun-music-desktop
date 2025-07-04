@@ -7,7 +7,7 @@
         }}
       </h2>
 
-      <template v-if="qualityOptions.length <= 4">
+      <div :class="[$style.qualityList, qualityOptions.length > 4 && $style.scrollable]">
         <base-btn
           v-for="quality in qualityOptions"
           :key="quality.value"
@@ -16,20 +16,7 @@
         >
           {{ quality.label }}
         </base-btn>
-      </template>
-
-      <template v-else>
-        <div :class="$style.selectWrapper">
-          <select v-model="selectedQuality" :class="$style.select">
-            <option v-for="quality in qualityOptions" :key="quality.value" :value="quality.value">
-              {{ quality.label }}
-            </option>
-          </select>
-        </div>
-        <base-btn :class="$style.downloadBtn" @click="handleSelectDownload">
-          {{ $t('download') }}
-        </base-btn>
-      </template>
+      </div>
     </main>
   </material-modal>
 </template>
@@ -65,7 +52,6 @@ export default {
   emits: ['update:show', 'confirm'],
   data() {
     return {
-      selectedQuality: '128k',
       qualityOptions: [
         { value: '128k', label: this.$t('download__normal') + ' - 128K' },
         { value: '320k', label: this.$t('download__high_quality') + ' - 320K' },
@@ -87,11 +73,6 @@ export default {
       this.handleClose()
       this.$emit('confirm')
     },
-    handleSelectDownload() {
-      if (this.selectedQuality) {
-        this.handleClick(this.selectedQuality)
-      }
-    },
     handleClose() {
       this.$emit('update:show', false)
     },
@@ -109,6 +90,7 @@ export default {
   display: flex;
   flex-flow: column nowrap;
   justify-content: center;
+
   h2 {
     font-size: 13px;
     color: var(--color-font);
@@ -118,32 +100,38 @@ export default {
   }
 }
 
-.btn {
-  display: block;
-  margin-bottom: 15px;
-  &:last-child {
-    margin-bottom: 0;
+.qualityList {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  &.scrollable {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 5px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--color-secondary-background);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: 3px;
+
+      &:hover {
+        background: var(--color-primary);
+      }
+    }
   }
 }
 
-.selectWrapper {
-  margin-bottom: 15px;
-  width: 100%;
-}
-
-.select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-secondary-background);
-  color: var(--color-font);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.downloadBtn {
+.btn {
   display: block;
-  margin-bottom: 0;
+  flex-shrink: 0;
 }
 </style>

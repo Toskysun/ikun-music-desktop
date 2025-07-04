@@ -3,30 +3,12 @@
     <main :class="$style.main">
       <h2>{{ info.name }}<br />{{ info.singer }}</h2>
 
-      <template v-if="qualitys.length <= 4">
-        <base-btn
-          v-for="quality in qualitys"
-          :key="quality.type"
-          :class="$style.btn"
-          @click="handleClick(quality.type)"
-        >
+      <div :class="[$style.qualityList, qualitys.length > 4 && $style.scrollable]">
+        <base-btn v-for="quality in qualitys" :key="quality.type" :class="$style.btn"
+          @click="handleClick(quality.type)">
           {{ getTypeName(quality.type) }}{{ quality.size && ` - ${quality.size.toUpperCase()}` }}
         </base-btn>
-      </template>
-
-      <template v-else>
-        <div :class="$style.selectWrapper">
-          <select v-model="selectedQuality" :class="$style.select">
-            <option v-for="quality in qualitys" :key="quality.type" :value="quality.type">
-              {{ getTypeName(quality.type)
-              }}{{ quality.size && ` - ${quality.size.toUpperCase()}` }}
-            </option>
-          </select>
-        </div>
-        <base-btn :class="$style.downloadBtn" @click="handleSelectDownload">
-          {{ $t('download') }}
-        </base-btn>
-      </template>
+      </div>
     </main>
   </material-modal>
 </template>
@@ -75,25 +57,10 @@ export default {
       return this.info.meta?.qualitys?.filter((quality) => this.checkSource(quality.type)) || []
     },
   },
-  watch: {
-    qualitys: {
-      immediate: true,
-      handler(newQualitys) {
-        if (newQualitys.length > 0) {
-          this.selectedQuality = newQualitys[0].type
-        }
-      },
-    },
-  },
   methods: {
     handleClick(quality) {
       void createDownloadTasks([this.musicInfo], quality, this.listId)
       this.handleClose()
-    },
-    handleSelectDownload() {
-      if (this.selectedQuality) {
-        this.handleClick(this.selectedQuality)
-      }
     },
     handleClose() {
       this.$emit('update:show', false)
@@ -143,33 +110,38 @@ export default {
   }
 }
 
-.btn {
-  display: block;
-  margin-bottom: 15px;
+.qualityList {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 
-  &:last-child {
-    margin-bottom: 0;
+  &.scrollable {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 5px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--color-secondary-background);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: 3px;
+
+      &:hover {
+        background: var(--color-primary);
+      }
+    }
   }
 }
 
-.selectWrapper {
-  margin-bottom: 15px;
-  width: 100%;
-}
-
-.select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-secondary-background);
-  color: var(--color-font);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.downloadBtn {
+.btn {
   display: block;
-  margin-bottom: 0;
+  flex-shrink: 0;
 }
 </style>
