@@ -115,12 +115,19 @@ export const mergeSetting = (
   }
 }
 
+const applyInitSetting = (setting: LX.AppSetting) => {
+  if (global.envParams.cmdParams.hidden && !setting['tray.enable']) {
+    setting['tray.enable'] = true
+  }
+}
+
 export const updateSetting = (setting?: Partial<LX.AppSetting>, isInit: boolean = false) => {
   const electronStore_config = getStore(STORE_NAMES.APP_SETTINGS)
 
   let originSetting: LX.AppSetting
   if (isInit) {
     setting &&= migrateSetting(setting)
+    applyInitSetting(setting as LX.AppSetting)
     originSetting = { ...defaultSetting }
   } else originSetting = global.lx.appSetting
 
