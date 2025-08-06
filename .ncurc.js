@@ -12,4 +12,27 @@ module.exports = {
     '@types/node',
     'electron-debug',
   ],
+
+  // target: 'newest',
+  // filter: [
+  //   'electron-builder',
+  //   'electron-updater',
+  // ],
+
+  // target: 'patch',
+  // filter: [
+  //   'electron',
+  //   'vue',
+  // ],
+
+  // target: 'minor',
+  // filter: [
+  //   'eslint',
+  //   'eslint-webpack-plugin',
+  //   'electron-debug',
+  //   '@types/node',
+
+  //   'eslint-plugin-vue',
+  //   'vue-eslint-parser',
+  // ],
 }
