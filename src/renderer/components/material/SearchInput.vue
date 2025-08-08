@@ -73,12 +73,15 @@
 import { clipboardReadText } from '@common/utils/electron'
 import { HOTKEY_COMMON } from '@common/hotKey'
 import { appSetting } from '@renderer/store/setting'
+import { useI18n } from '@root/lang'
+
+const t = useI18n()
 
 export default {
   props: {
     placeholder: {
       type: String,
-      default: 'Search for something...',
+      default: t('search_text'),
     },
     list: {
       type: Array,

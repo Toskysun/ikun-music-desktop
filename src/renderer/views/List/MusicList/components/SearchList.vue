@@ -76,12 +76,15 @@
 import { debounce } from '@common/utils'
 import { clipboardReadText } from '@common/utils/electron'
 import { toRaw } from '@common/utils/vueTools'
+import { useI18n } from '@root/lang'
+
+const t = useI18n()
 
 export default {
   props: {
     placeholder: {
       type: String,
-      default: 'Search for something...',
+      default: t('search_text'),
     },
     list: {
       type: Array,
