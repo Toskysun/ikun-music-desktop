@@ -7,7 +7,7 @@ import { clipFileNameLength, clipNameLength } from '@common/utils/tools'
 /**
  * 保存歌词文件
  * @param {*} filePath
- * @param {*} lrc
+ * @param {*} lrcData
  * @param {*} format
  */
 export const saveLrc = async (
