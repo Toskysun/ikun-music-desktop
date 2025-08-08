@@ -3,8 +3,6 @@ const sources: Array<{
   name: string
   disabled: boolean
   supportQualitys: Partial<Record<LX.OnlineSource, LX.Quality[]>>
-}> = [
-
-]
+}> = []
 
 export default sources

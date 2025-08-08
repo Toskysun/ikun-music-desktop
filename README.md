@@ -12,7 +12,6 @@
   <!-- <a href="https://github.com/lyswhut/lx-music-desktop/blob/master/LICENSE"><img src="https://img.shields.io/github/license/lyswhut/lx-music-desktop" alt="License"></a> -->
 </p>
 
-
 <p align="center">一个基于 Electron & Vue 开发的音乐软件</p>
 
 ## 说明

@@ -4,8 +4,12 @@
       <h2>{{ info.name }}<br />{{ info.singer }}</h2>
 
       <div :class="[$style.qualityList, qualitys.length > 4 && $style.scrollable]">
-        <base-btn v-for="quality in qualitys" :key="quality.type" :class="$style.btn"
-          @click="handleClick(quality.type)">
+        <base-btn
+          v-for="quality in qualitys"
+          :key="quality.type"
+          :class="$style.btn"
+          @click="handleClick(quality.type)"
+        >
           {{ getTypeName(quality.type) }}{{ quality.size && ` - ${quality.size.toUpperCase()}` }}
         </base-btn>
       </div>

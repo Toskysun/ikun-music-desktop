@@ -746,7 +746,7 @@
   "setting_play_quality_320k": "320K 高音",
   "setting_play_quality_flac": "FLAC 无损",
   "setting_play_quality_hires": "Hires 无损24-Bit",
-  "setting_play_quality_atmos": "臻品全景声2.0",
-  "setting_play_quality_atmos_plus": "臻品全景声2.0",
+  "setting_play_quality_atmos": "臻品音质",
+  "setting_play_quality_atmos_plus": "臻品音质2.0",
   "setting_play_quality_master": "臻品母带"
 }

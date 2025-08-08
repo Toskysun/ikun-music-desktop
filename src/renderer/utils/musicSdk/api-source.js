@@ -1,8 +1,7 @@
 import apiSourceInfo from './api-source-info'
 import { apiSource, userApi } from '@renderer/store'
 
-const allApi = {
-}
+const allApi = {}
 
 const apiList = {}
 const supportQuality = {}
