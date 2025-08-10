@@ -528,6 +528,11 @@ declare global {
       'download.isDownloadLrc': boolean
 
       /**
+       * 是否在下载 lx 歌词
+       */
+      'download.isDownloadLxLrc': boolean
+
+      /**
        * 是否下载翻译歌词文件
        */
       'download.isDownloadTLrc': boolean
@@ -546,6 +551,11 @@ declare global {
        * 是否在音频文件中嵌入歌曲封面
        */
       'download.isEmbedPic': boolean
+
+      /**
+       * 是否在音频文件中嵌入 lx 歌词
+       */
+      'download.isEmbedLyricLx': boolean
 
       /**
        * 是否在音频文件中嵌入歌词
