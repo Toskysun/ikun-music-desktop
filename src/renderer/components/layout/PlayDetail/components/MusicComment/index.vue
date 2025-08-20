@@ -202,7 +202,7 @@ export default {
       this.currentMusicInfo =
         'progress' in this.musicInfo ? this.musicInfo.metadata.musicInfo : this.musicInfo
 
-      if (this.currentMusicInfo.source == 'local' || !music[this.currentMusicInfo.source].comment) {
+      if (this.currentMusicInfo.source == 'local' || this.currentMusicInfo.source == 'git' || !music[this.currentMusicInfo.source].comment) {
         this.available = false
         return
       }
@@ -258,12 +258,14 @@ export default {
   transform-origin: 100%;
   overflow: hidden;
 }
+
 .commentHeader {
   flex: none;
   padding-bottom: 5px;
   display: flex;
   flex-flow: row nowrap;
   align-items: center;
+
   // border-bottom: 1px solid #eee;
   h3 {
     font-size: 14px;
@@ -271,6 +273,7 @@ export default {
     line-height: 1.2;
   }
 }
+
 .commentHeaderBtns {
   flex: 1 0 auto;
   display: flex;
@@ -278,13 +281,14 @@ export default {
   justify-content: flex-end;
   color: var(--color-primary);
 }
+
 .commentHeaderBtn {
   height: 22px;
   width: 22px;
   cursor: pointer;
   transition: opacity @transition-normal;
 
-  + .commentHeaderBtn {
+  +.commentHeaderBtn {
     margin-left: 5px;
   }
 
@@ -292,6 +296,7 @@ export default {
     opacity: 0.7;
   }
 }
+
 .commentMain {
   flex: auto;
   background-color: var(--color-primary-light-400-alpha-700);
@@ -299,6 +304,7 @@ export default {
   display: flex;
   flex-direction: column;
 }
+
 .tab_header {
   display: flex;
   flex-flow: row nowrap;
@@ -306,6 +312,7 @@ export default {
   padding-left: 15px;
   padding-right: 10px;
 }
+
 .tab_main {
   flex: auto;
   display: flex;
@@ -314,11 +321,13 @@ export default {
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
 }
+
 .tab_content {
   flex-shrink: 0;
   width: 100%;
   position: relative;
 }
+
 .tab_content_scroll {
   position: absolute;
   left: 0;
@@ -329,11 +338,13 @@ export default {
   padding-right: 10px;
   scroll-behavior: smooth;
 }
+
 .commentLabel {
   padding: 15px;
   color: var(--color-font-label);
   font-size: 14px;
 }
+
 .commentType {
   padding: 5px;
   margin: 5px 0;
@@ -343,13 +354,16 @@ export default {
   cursor: pointer;
   transition: @transition-normal;
   transition-property: opacity, color;
+
   &:hover {
     opacity: 0.7;
   }
+
   &.active {
     color: var(--color-primary);
   }
 }
+
 .commentFloor {
   opacity: 1;
   transition: opacity @transition-normal;
@@ -358,6 +372,7 @@ export default {
     opacity: 0.4;
   }
 }
+
 .pagination {
   padding: 10px 0;
 }

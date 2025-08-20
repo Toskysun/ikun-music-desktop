@@ -162,6 +162,7 @@ export const getCachedLyricInfo = async (
           case 'mg':
           case 'wy':
           case 'tx':
+          case 'git':
             break
           default:
             return lrcInfo

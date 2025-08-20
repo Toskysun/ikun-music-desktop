@@ -122,6 +122,7 @@ export const search = async (
     return music[sourceId].musicSearch
       .search(text, page, listInfo!.limit)
       .then((data: SearchResult) => {
+        console.log(data)
         if (key != listInfo!.key) return []
         return setList(data, page, text)
       })

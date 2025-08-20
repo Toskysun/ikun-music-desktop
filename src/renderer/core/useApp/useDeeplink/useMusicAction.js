@@ -146,6 +146,23 @@ const usePlayMusic = () => {
           musicInfo
         )
         break
+      case 'git':
+        musicInfo = dataVerify(
+          [
+            { key: 'name', types: ['string'], required: true, max: 200 },
+            { key: 'singer', types: ['string'], required: true, max: 200 },
+            { key: 'source', types: ['string'], required: true },
+            { key: 'songmid', types: ['string'], max: 64, required: true },
+            { key: 'img', types: ['string'], max: 1024 },
+            { key: 'albumId', types: ['string'], max: 64 },
+            { key: 'interval', types: ['string'], max: 64 },
+            { key: 'albumName', types: ['string'], max: 200 },
+            { key: 'types', types: ['object'], required: true },
+            { key: '_gitcodeData', types: ['object'], required: true },
+          ],
+          musicInfo
+        )
+        break
       default:
         throw new Error('Unknown source: ' + musicInfo.source)
     }

@@ -3,6 +3,7 @@ import kg from './kg/index'
 import tx from './tx/index'
 import wy from './wy/index'
 import mg from './mg/index'
+import git from './git/index'
 import { supportQuality } from './api-source'
 
 const sources = {
@@ -27,12 +28,17 @@ const sources = {
       name: '咪咕音乐',
       id: 'mg',
     },
+    {
+      name: 'Gitcode',
+      id: 'git',
+    },
   ],
   kw,
   kg,
   tx,
   wy,
   mg,
+  git,
 }
 export default {
   ...sources,

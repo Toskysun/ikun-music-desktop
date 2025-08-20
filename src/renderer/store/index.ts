@@ -79,7 +79,10 @@ export const openAPI = reactive({
 })
 
 export const windowSizeActive = computed(() => {
-  return windowSizeList.find((i) => i.id === appSetting['common.windowSizeId']) ?? windowSizeList[0]
+  return (
+    windowSizeList.find((i: { id: any }) => i.id === appSetting['common.windowSizeId']) ??
+    windowSizeList[0]
+  )
 })
 
 export const getSourceI18nPrefix = () => {
@@ -94,6 +97,7 @@ export const sourceNames = computed(() => {
     kg: 'kg',
     mg: 'mg',
     wy: 'wy',
+    git: 'git',
     all: window.i18n.t((prefix + 'all') as any),
   }
   for (const { id } of music.sources) {
@@ -147,7 +151,7 @@ export const isShowChangeLog = ref(false)
 export const isFullscreen = ref(false)
 watch(
   isFullscreen,
-  (isFullscreen) => {
+  (isFullscreen: any) => {
     window.lx.rootOffset = window.dt || isFullscreen ? 0 : 8
   },
   { immediate: true }

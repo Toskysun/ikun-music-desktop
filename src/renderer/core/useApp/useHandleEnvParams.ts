@@ -72,6 +72,7 @@ const useInitEnvParamPlay = () => {
       case 'tx':
       case 'mg':
       case 'wy':
+      case 'git':
         void playSongListDetail(params.source, params.link, parseInt(params.index))
         break
     }
