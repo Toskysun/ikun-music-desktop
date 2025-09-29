@@ -133,7 +133,10 @@ body {
     }
   }
   &.hide {
-    opacity: 0.05;
+    opacity: .05;
+    &:hover {
+      opacity: 1;
+    }
   }
 }
 
