@@ -54,6 +54,9 @@ export default () => {
   const handleSetLyric = () => {
     sendPlayerStatus({
       lyric: musicInfo.lrc ?? '',
+      tlyric: musicInfo.tlrc ?? '',
+      rlyric: musicInfo.rlrc ?? '',
+      lxlyric: musicInfo.lxlrc ?? '',
       lyricLineText: '',
       lyricLineAllText: '',
     })
@@ -210,6 +213,9 @@ export default () => {
       playbackRate: appSetting['player.playbackRate'],
       picUrl: musicInfo.pic ?? '',
       lyric: musicInfo.lrc ?? '',
+      tlyric: musicInfo.tlrc ?? '',
+      rlyric: musicInfo.rlrc ?? '',
+      lxlyric: musicInfo.lxlrc ?? '',
     })
   }
 }

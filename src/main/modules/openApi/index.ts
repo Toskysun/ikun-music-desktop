@@ -57,11 +57,16 @@ const handleSendStatus = (res: http.ServerResponse<http.IncomingMessage>, query?
   for (const k of keys) resp[k] = global.lx.player_status[k]
   sendResponse(res, 200, resp, 'application/json; charset=utf-8')
 }
-const handleSubscribePlayerStatus = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse<http.IncomingMessage>,
-  query?: string
-) => {
+const handleSendAllLyric = (res: http.ServerResponse<http.IncomingMessage>) => {
+  const resp: Partial<Record<SubscribeKeys, any>> = {
+    lyric: global.lx.player_status.lyric,
+    tlyric: global.lx.player_status.tlyric,
+    rlyric: global.lx.player_status.rlyric,
+    lxlyric: global.lx.player_status.lxlyric,
+  }
+  sendResponse(res, 200, resp, 'application/json; charset=utf-8')
+}
+const handleSubscribePlayerStatus = (req: http.IncomingMessage, res: http.ServerResponse<http.IncomingMessage>, query?: string) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     Connection: 'keep-alive',
@@ -140,6 +145,9 @@ const handleStartServer = async (port: number, ip: string) =>
       case '/lyric':
         msg = global.lx.player_status.lyric
         break
+      case '/lyric-all':
+        handleSendAllLyric(res)
+        return
       case '/play':
         sendTaskbarButtonClick('play')
         break
