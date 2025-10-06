@@ -9,7 +9,7 @@
     ]"
   >
     <SearchInput />
-    <div v-if="appSetting['common.controlBtnPosition'] == 'left'" :class="$style.logo">L X</div>
+    <div v-if="appSetting['common.controlBtnPosition'] == 'left'" :class="$style.logo">IKUN</div>
     <ControlBtns v-else />
   </div>
 </template>
