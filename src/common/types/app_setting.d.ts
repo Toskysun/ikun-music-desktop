@@ -578,6 +578,11 @@ declare global {
       'download.isUseOtherSource': boolean
 
       /**
+       * 音质降级策略
+       */
+      'download.qualityFallbackStrategy': 'downgrade' | 'upgrade' | 'none'
+
+      /**
        * 主题id
        */
       'theme.id': string

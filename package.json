@@ -1,6 +1,6 @@
 {
   "name": "ikun-music-desktop",
-  "version": "3.3.0-fix.1",
+  "version": "3.4.0",
   "description": "一个免费的音乐查找助手",
   "main": "./dist/main.js",
   "scripts": {
@@ -88,7 +88,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ikunshare/ikun-music-desktop.git"
+    "url": "git+https://github.com/Toskysun/ikun-music-desktop.git"
   },
   "keywords": [
     "music-player",
@@ -96,14 +96,14 @@
     "vuejs3"
   ],
   "author": {
-    "name": "ikunshare",
-    "email": "ikun0014@qq.com"
+    "name": "Toskysun",
+    "email": "3kddyys@gmail.com"
   },
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/ikunshare/ikun-music-desktop/issues"
+    "url": "https://github.com/Toskysun/ikun-music-desktop/issues"
   },
-  "homepage": "https://github.com/ikunshare/ikun-music-desktop#readme",
+  "homepage": "https://github.com/Toskysun/ikun-music-desktop#readme",
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/eslint-parser": "^7.28.4",

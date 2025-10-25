@@ -7,7 +7,7 @@ const afterPack = require('./build-after-pack')
  * @see https://www.electron.build/configuration/configuration
  */
 const options = {
-  appId: 'com.ikunshare.music.desktop',
+  appId: 'com.toskysun.music.desktop',
   productName: 'ikun-music-desktop',
   beforePack,
   afterPack,
@@ -41,7 +41,7 @@ const options = {
   publish: [
     {
       provider: 'github',
-      owner: 'ikunshare',
+      owner: 'Toskysun',
       repo: 'ikun-music-desktop',
     },
   ],
@@ -53,7 +53,7 @@ const options = {
 const winOptions = {
   win: {
     icon: './resources/icons/icon.ico',
-    legalTrademarks: 'ikunshare',
+    legalTrademarks: 'Toskysun',
     // artifactName: '${productName}-v${version}-${env.ARCH}-${env.TARGET}.${ext}',
   },
   nsis: {
@@ -71,7 +71,7 @@ const winOptions = {
  */
 const linuxOptions = {
   linux: {
-    maintainer: 'ikunshare <ikunshare@qq.com>',
+    maintainer: 'Toskysun <3kddyys@gmail.com>',
     // artifactName: '${productName}-${version}.${env.ARCH}.${ext}',
     icon: './resources/icons',
     category: 'Utility;AudioVideo;Audio;Player;Music;',

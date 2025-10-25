@@ -3,7 +3,7 @@ dt#about {{ $t('setting__about') }}
 dd
   .p.small
     | 本软件完全免费, 基于此项目修改：
-    span.hover.underline(:aria-label="$t('setting__click_open')" @click="openUrl('https://github.com/ikunshare/ikun-music-desktop#readme')") https://github.com/ikunshare/ikun-music-desktop
+    span.hover.underline(:aria-label="$t('setting__click_open')" @click="openUrl('https://github.com/Toskysun/ikun-music-desktop#readme')") https://github.com/Toskysun/ikun-music-desktop
   .p.small
     | 最新版下载地址：
     span.hover.underline(:aria-label="$t('setting__click_open')" @click="openUrl('https://qm.qq.com/q/4icC92o3tu')") QQ群文件
@@ -32,7 +32,7 @@ dd
     | 你已签署本软件的
     base-btn(min @click="handleShowPact") 许可协议
     | ，协议的在线版本在
-    strong.hover.underline(:aria-label="$t('setting__click_open')" @click="openUrl('https://github.com/ikunshare/ikun-music-desktop#%E9%A1%B9%E7%9B%AE%E5%8D%8F%E8%AE%AE')") 这里
+    strong.hover.underline(:aria-label="$t('setting__click_open')" @click="openUrl('https://github.com/Toskysun/ikun-music-desktop#%E9%A1%B9%E7%9B%AE%E5%8D%8F%E8%AE%AE')") 这里
     | 。
   br
 

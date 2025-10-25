@@ -16,6 +16,55 @@ import { DOWNLOAD_STATUS } from '@common/constants'
 import { proxy } from '../index'
 import { buildSavePath } from './utils'
 
+// 音质顺序：从低到高
+export const QUALITY_ORDER: LX.Quality[] = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master']
+
+/**
+ * 根据回退策略获取备选音质列表
+ * @param requestedQuality 请求的音质
+ * @param availableQualities 可用的音质列表
+ * @param strategy 回退策略
+ * @returns 按优先级排序的备选音质列表
+ */
+export const getFallbackQualities = (
+  requestedQuality: LX.Quality,
+  availableQualities: LX.Quality[],
+  strategy: 'downgrade' | 'upgrade' | 'max' | 'min'
+): LX.Quality[] => {
+  const requestedIndex = QUALITY_ORDER.indexOf(requestedQuality)
+
+  switch (strategy) {
+    case 'downgrade': {
+      // 降级：从请求的音质向下查找
+      const fallbackQualities = QUALITY_ORDER.slice(0, requestedIndex)
+        .reverse()
+        .filter(q => availableQualities.includes(q))
+      return fallbackQualities
+    }
+    case 'upgrade': {
+      // 升级：从请求的音质向上查找
+      const fallbackQualities = QUALITY_ORDER.slice(requestedIndex + 1)
+        .filter(q => availableQualities.includes(q))
+      return fallbackQualities
+    }
+    case 'max': {
+      // 最大音质：从高到低排序
+      const fallbackQualities = [...QUALITY_ORDER]
+        .reverse()
+        .filter(q => availableQualities.includes(q) && q !== requestedQuality)
+      return fallbackQualities
+    }
+    case 'min': {
+      // 最低音质：从低到高排序
+      const fallbackQualities = QUALITY_ORDER
+        .filter(q => availableQualities.includes(q) && q !== requestedQuality)
+      return fallbackQualities
+    }
+    default:
+      return []
+  }
+}
+
 const waitingUpdateTasks = new Map<string, LX.Download.ListItem>()
 let timer: NodeJS.Timeout | null = null
 const throttleUpdateTask = (tasks: LX.Download.ListItem[]) => {
@@ -229,25 +278,78 @@ const downloadLyric = (downloadInfo: LX.Download.ListItem) => {
 
 const getUrl = async (downloadInfo: LX.Download.ListItem, isRefresh: boolean = false) => {
   let toggleMusicInfo = downloadInfo.metadata.musicInfo.meta.toggleMusicInfo
-  return (
-    toggleMusicInfo
-      ? getMusicUrl({
-          musicInfo: toggleMusicInfo,
-          isRefresh,
-          quality: downloadInfo.metadata.quality,
-          allowToggleSource: false,
+  const requestedQuality = downloadInfo.metadata.quality
+
+  // 尝试使用原始请求的音质
+  const tryWithQuality = async (quality: LX.Quality): Promise<string> => {
+    return (
+      toggleMusicInfo
+        ? getMusicUrl({
+            musicInfo: toggleMusicInfo,
+            isRefresh,
+            quality,
+            allowToggleSource: false,
+          })
+        : Promise.reject(new Error('not found'))
+    )
+      .catch(() => {
+        return getMusicUrl({
+          musicInfo: downloadInfo.metadata.musicInfo,
+          isRefresh: false,
+          quality,
+          allowToggleSource: appSetting['download.isUseOtherSource'],
         })
-      : Promise.reject(new Error('not found'))
-  )
-    .catch(() => {
-      return getMusicUrl({
-        musicInfo: downloadInfo.metadata.musicInfo,
-        isRefresh: false,
-        quality: downloadInfo.metadata.quality,
-        allowToggleSource: appSetting['download.isUseOtherSource'],
       })
-    })
-    .catch(() => '')
+  }
+
+  try {
+    // 首先尝试请求的音质
+    return await tryWithQuality(requestedQuality)
+  } catch (error) {
+    // 获取可用音质列表
+    const musicInfo = toggleMusicInfo || downloadInfo.metadata.musicInfo
+    const availableQualities = qualityList.value[musicInfo.source] || []
+
+    // 如果音乐信息中有 _qualitys 字段，使用它来过滤可用音质
+    if (musicInfo.meta._qualitys) {
+      const musicAvailableQualities = Object.keys(musicInfo.meta._qualitys)
+        .filter(q => musicInfo.meta._qualitys[q as LX.Quality]) as LX.Quality[]
+      const filteredQualities = availableQualities.filter(q => musicAvailableQualities.includes(q))
+
+      // 根据策略获取备选音质列表
+      const fallbackStrategy = appSetting['download.qualityFallbackStrategy'] as 'downgrade' | 'upgrade' | 'max' | 'min'
+      const fallbackQualities = getFallbackQualities(requestedQuality, filteredQualities, fallbackStrategy)
+
+      // 逐个尝试备选音质
+      for (const fallbackQuality of fallbackQualities) {
+        try {
+          const url = await tryWithQuality(fallbackQuality)
+          if (url) {
+            // 更新下载任务的音质为实际使用的音质
+            downloadInfo.metadata.quality = fallbackQuality
+
+            // 添加音质变更提示
+            if (fallbackQuality !== requestedQuality) {
+              setStatusText(downloadInfo,
+                window.i18n.t('download_quality_fallback_notice', {
+                  requested: requestedQuality,
+                  actual: fallbackQuality
+                })
+              )
+            }
+
+            return url
+          }
+        } catch (err) {
+          // 继续尝试下一个音质
+          continue
+        }
+      }
+    }
+
+    // 所有音质都失败，返回空字符串
+    return ''
+  }
 }
 const handleRefreshUrl = (downloadInfo: LX.Download.ListItem) => {
   setStatusText(downloadInfo, window.i18n.t('download_status_error_refresh_url'))
@@ -400,13 +502,15 @@ export const createDownloadTasks = async (
   listId?: string
 ) => {
   if (!list.length) return
+  const fallbackStrategy = appSetting['download.qualityFallbackStrategy'] as 'downgrade' | 'upgrade' | 'max' | 'min'
   const tasks = filterTask(
     await window.lx.worker.download.createDownloadTasks(
       list,
       quality,
       appSetting['download.fileName'],
       toRaw(qualityList.value),
-      listId
+      listId,
+      fallbackStrategy
     )
   )
 

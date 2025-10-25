@@ -31,6 +31,15 @@ dd
   div
     base-checkbox(id="setting_download_isUseOtherSource" :model-value="appSetting['download.isUseOtherSource']" :label="$t('setting__is_enable')" @update:model-value="updateSetting({'download.isUseOtherSource': $event})")
   div
+dd
+  h3#download_quality_fallback_strategy
+    | {{ $t('setting__download_quality_fallback_strategy') }}
+    svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__download_quality_fallback_strategy_tip')")
+  div
+    base-checkbox.gap-left(
+      v-for="item in qualityFallbackOptions" :id="`setting_download_qualityFallback_${item.value}`" :key="item.value"
+      name="setting_download_qualityFallback" need :model-value="appSetting['download.qualityFallbackStrategy']" :value="item.value" :label="item.name"
+      @update:model-value="updateSetting({'download.qualityFallbackStrategy': $event})")
 dd(:aria-label="$t('setting__download_name_title')")
   h3#download_name {{ $t('setting__download_name') }}
   div
@@ -117,6 +126,15 @@ export default {
       ]
     })
 
+    const qualityFallbackOptions = computed(() => {
+      return [
+        { value: 'downgrade', name: t('setting__download_quality_fallback_downgrade') },
+        { value: 'upgrade', name: t('setting__download_quality_fallback_upgrade') },
+        { value: 'max', name: t('setting__download_quality_fallback_max') },
+        { value: 'min', name: t('setting__download_quality_fallback_min') },
+      ]
+    })
+
     return {
       appSetting,
       updateSetting,
@@ -124,6 +142,7 @@ export default {
       handleChangeSavePath,
       musicNames,
       lrcFormatList,
+      qualityFallbackOptions,
       maxNums,
       handleUpdateMaxNum,
     }

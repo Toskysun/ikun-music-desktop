@@ -28,6 +28,13 @@
         >
           {{ $t('list__collect') }}
         </base-btn>
+        <base-btn
+          :class="$style.headerRightBtn"
+          :disabled="!!listDetailInfo.noItemLabel"
+          @click="handleDownloadAll"
+        >
+          {{ $t('list__download_all') }}
+        </base-btn>
         <base-btn :class="$style.headerRightBtn" @click="handleBack">{{ $t('back') }}</base-btn>
       </div>
     </div>
@@ -43,6 +50,11 @@
         @toggle-page="togglePage"
       />
     </div>
+    <download-multiple-modal
+      v-model:show="isShowDownloadMultiple"
+      :list="listDetailInfo.list"
+      :list-id="listDetailInfo.id"
+    />
   </div>
 </template>
 
@@ -54,12 +66,14 @@ import { useRouter } from '@common/utils/vueRouter'
 import { addSongListDetail, playSongListDetail } from './action'
 import useList from './useList'
 import useKeyBack from './useKeyBack'
+import DownloadMultipleModal from '@renderer/components/common/DownloadMultipleModal.vue'
 
 const source = ref<LX.OnlineSource>('kw')
 const id = ref<string>('')
 const page = ref<number>(1)
 const picUrl = ref<string>('')
 const refresh = ref<boolean>(false)
+const isShowDownloadMultiple = ref<boolean>(false)
 
 interface Query {
   source?: string
@@ -118,6 +132,9 @@ const verifyQueryParams = async function (
 }
 
 export default {
+  components: {
+    DownloadMultipleModal,
+  },
   beforeRouteEnter: verifyQueryParams,
   beforeRouteUpdate: verifyQueryParams,
   setup() {
@@ -134,6 +151,13 @@ export default {
       if (window.lx.songListInfo.fromName)
         void router.replace({ name: window.lx.songListInfo.fromName })
       else router.back()
+    }
+
+    const handleDownloadAll = () => {
+      if (listDetailInfo.list.length === 0) {
+        return
+      }
+      isShowDownloadMultiple.value = true
     }
 
     useKeyBack(handleBack)
@@ -166,6 +190,8 @@ export default {
       playSongListDetail,
       handlePlayList,
       handleBack,
+      handleDownloadAll,
+      isShowDownloadMultiple,
     }
   },
 }

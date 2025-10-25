@@ -71,7 +71,7 @@
         <p>
           6.1&nbsp;本项目完全免费，且开源发布于&nbsp;<span
             class="hover underline"
-            @click="openUrl('https://github.com/ikunshare/ikun-music-desktop#readme')"
+            @click="openUrl('https://github.com/Toskysun/ikun-music-desktop#readme')"
             >GitHub</span
           >&nbsp;面向全世界人用作对技术的学习交流，本项目不对项目内的技术可能存在违反当地法律法规的行为作保证。
         </p>

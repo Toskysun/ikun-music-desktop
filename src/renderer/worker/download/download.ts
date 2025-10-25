@@ -53,11 +53,12 @@ export const createDownloadTasks = (
   quality: LX.Quality,
   fileNameFormat: string,
   qualityList: LX.QualityList,
-  listId?: string
+  listId?: string,
+  fallbackStrategy: 'downgrade' | 'upgrade' | 'max' | 'min' = 'downgrade'
 ): LX.Download.ListItem[] => {
   return list
     .map((musicInfo) => {
-      return createDownloadInfo(musicInfo, quality, fileNameFormat, qualityList, listId)
+      return createDownloadInfo(musicInfo, quality, fileNameFormat, qualityList, listId, fallbackStrategy)
     })
     .filter((task) => task)
   // commit('addTasks', { list: taskList, addMusicLocationType: rootState.setting.list.addMusicLocationType })
