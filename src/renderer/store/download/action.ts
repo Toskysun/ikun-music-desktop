@@ -15,55 +15,18 @@ import { arrPush, arrUnshift, joinPath } from '@renderer/utils'
 import { DOWNLOAD_STATUS } from '@common/constants'
 import { proxy } from '../index'
 import { buildSavePath } from './utils'
+import {
+  QUALITY_ORDER as _QUALITY_ORDER,
+  getFallbackQualities as _getFallbackQualities,
+} from '@common/utils/downloadQuality'
 
-// 音质顺序：从低到高
-export const QUALITY_ORDER: LX.Quality[] = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master']
+// 从共享模块重新导出，避免循环依赖
+// 原函数已移至 @common/utils/downloadQuality.ts
+export { QUALITY_ORDER, getFallbackQualities } from '@common/utils/downloadQuality'
 
-/**
- * 根据回退策略获取备选音质列表
- * @param requestedQuality 请求的音质
- * @param availableQualities 可用的音质列表
- * @param strategy 回退策略
- * @returns 按优先级排序的备选音质列表
- */
-export const getFallbackQualities = (
-  requestedQuality: LX.Quality,
-  availableQualities: LX.Quality[],
-  strategy: 'downgrade' | 'upgrade' | 'max' | 'min'
-): LX.Quality[] => {
-  const requestedIndex = QUALITY_ORDER.indexOf(requestedQuality)
-
-  switch (strategy) {
-    case 'downgrade': {
-      // 降级：从请求的音质向下查找
-      const fallbackQualities = QUALITY_ORDER.slice(0, requestedIndex)
-        .reverse()
-        .filter(q => availableQualities.includes(q))
-      return fallbackQualities
-    }
-    case 'upgrade': {
-      // 升级：从请求的音质向上查找
-      const fallbackQualities = QUALITY_ORDER.slice(requestedIndex + 1)
-        .filter(q => availableQualities.includes(q))
-      return fallbackQualities
-    }
-    case 'max': {
-      // 最大音质：从高到低排序
-      const fallbackQualities = [...QUALITY_ORDER]
-        .reverse()
-        .filter(q => availableQualities.includes(q) && q !== requestedQuality)
-      return fallbackQualities
-    }
-    case 'min': {
-      // 最低音质：从低到高排序
-      const fallbackQualities = QUALITY_ORDER
-        .filter(q => availableQualities.includes(q) && q !== requestedQuality)
-      return fallbackQualities
-    }
-    default:
-      return []
-  }
-}
+// 内部使用别名导入
+const QUALITY_ORDER = _QUALITY_ORDER
+const getFallbackQualities = _getFallbackQualities
 
 const waitingUpdateTasks = new Map<string, LX.Download.ListItem>()
 let timer: NodeJS.Timeout | null = null
@@ -501,10 +464,23 @@ export const createDownloadTasks = async (
   quality: LX.Quality,
   listId?: string
 ) => {
-  if (!list.length) return
+  console.log('[action] createDownloadTasks called with:', { list, quality, listId })
+  if (!list.length) {
+    console.log('[action] No items in list, returning early')
+    return
+  }
   const fallbackStrategy = appSetting['download.qualityFallbackStrategy'] as 'downgrade' | 'upgrade' | 'max' | 'min'
-  const tasks = filterTask(
-    await window.lx.worker.download.createDownloadTasks(
+  console.log('[action] Calling worker.download.createDownloadTasks with:', {
+    listLength: list.length,
+    quality,
+    fileName: appSetting['download.fileName'],
+    qualityList: toRaw(qualityList.value),
+    listId,
+    fallbackStrategy
+  })
+
+  try {
+    const workerResult = await window.lx.worker.download.createDownloadTasks(
       list,
       quality,
       appSetting['download.fileName'],
@@ -512,10 +488,22 @@ export const createDownloadTasks = async (
       listId,
       fallbackStrategy
     )
-  )
+    console.log('[action] Worker result:', workerResult)
 
-  if (tasks.length) await addTasks(tasks)
-  void checkStartTask()
+    const tasks = filterTask(workerResult)
+    console.log('[action] Tasks after filter:', tasks)
+
+    if (tasks.length) {
+      console.log('[action] Adding tasks...')
+      await addTasks(tasks)
+      console.log('[action] Tasks added successfully')
+    }
+    console.log('[action] Checking start task...')
+    void checkStartTask()
+  } catch (error) {
+    console.error('[action] Error in createDownloadTasks:', error)
+    throw error
+  }
 }
 
 /**
@@ -576,4 +564,39 @@ export const removeDownloadTasks = async (ids: string[]) => {
 
   void checkStartTask()
   window.app_event.downloadListUpdate()
+}
+
+/**
+ * 取消所有正在运行和等待中的下载任务
+ */
+export const cancelAllDownloadTasks = async () => {
+  const tasksToCancel = downloadList.filter(
+    task => task.status === DOWNLOAD_STATUS.RUN || task.status === DOWNLOAD_STATUS.WAITING
+  )
+
+  if (tasksToCancel.length === 0) {
+    return 0 // 返回取消的任务数量
+  }
+
+  await pauseDownloadTasks(tasksToCancel)
+  return tasksToCancel.length
+}
+
+/**
+ * 清空所有已完成、出错和暂停的下载任务
+ */
+export const clearCompletedDownloadTasks = async () => {
+  const tasksToClear = downloadList.filter(
+    task => task.status === DOWNLOAD_STATUS.COMPLETED ||
+            task.status === DOWNLOAD_STATUS.ERROR ||
+            task.status === DOWNLOAD_STATUS.PAUSE
+  )
+
+  if (tasksToClear.length === 0) {
+    return 0
+  }
+
+  const ids = tasksToClear.map(task => task.id)
+  await removeDownloadTasks(ids)
+  return tasksToClear.length
 }

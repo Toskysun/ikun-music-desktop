@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { existsSync, mkdirSync, renameSync } from 'fs'
+import { existsSync, mkdirSync, renameSync, readFileSync } from 'fs'
 import { app, shell, screen, nativeTheme, dialog } from 'electron'
 import { URL_SCHEME_RXP } from '@common/constants'
 import { getTheme, initHotKey, initSetting, parseEnvParams } from './utils'
@@ -11,6 +11,34 @@ import { isMac, log } from '@common/utils'
 import createWorkers from './worker'
 import { migrateDBData } from './utils/migrate'
 import { openDirInExplorer } from '@common/utils/electron'
+
+// 加载自定义证书
+const loadCustomCertificates = (): string[] => {
+  const customCerts: string[] = []
+
+  // 用户提供的证书路径
+  const certPaths = [
+    'D:\\Downloads\\reqable-ca.crt',
+    path.join(app.getPath('userData'), 'custom-ca.crt'),
+  ]
+
+  for (const certPath of certPaths) {
+    try {
+      if (existsSync(certPath)) {
+        const cert = readFileSync(certPath, 'utf-8')
+        customCerts.push(cert)
+        console.log(`✅ Loaded custom certificate: ${certPath}`)
+      }
+    } catch (err) {
+      console.warn(`⚠️  Failed to load certificate from ${certPath}:`, err)
+    }
+  }
+
+  return customCerts
+}
+
+// 存储自定义证书
+let customTrustedCerts: string[] = []
 
 export const initGlobalData = () => {
   const envParams = parseEnvParams()
@@ -115,6 +143,20 @@ export const applyElectronEnvParams = () => {
 
   app.commandLine.appendSwitch('--disable-gpu-sandbox')
 
+  // 支持自定义证书，允许抓包工具（如 Reqable）
+  // 检查是否存在自定义证书文件
+  const customCertPaths = [
+    'D:\\Downloads\\reqable-ca.crt',
+    path.join(app.getPath('userData'), 'custom-ca.crt'),
+  ]
+  const hasCustomCert = customCertPaths.some(certPath => existsSync(certPath))
+
+  if (hasCustomCert) {
+    // 忽略证书错误，允许使用自定义 CA 证书
+    app.commandLine.appendSwitch('ignore-certificate-errors')
+    console.log('🔓 Certificate validation relaxed: Custom CA certificates detected')
+  }
+
   // proxy
   if (global.envParams.cmdParams['proxy-server']) {
     app.commandLine.appendSwitch('proxy-server', global.envParams.cmdParams['proxy-server'])
@@ -168,6 +210,35 @@ export const registerDeeplink = (startApp: () => void) => {
 }
 
 export const listenerAppEvent = (startApp: () => void) => {
+  // 加载自定义受信任证书
+  customTrustedCerts = loadCustomCertificates()
+
+  // 处理证书验证错误，支持抓包工具（如 Reqable）
+  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+    event.preventDefault()
+
+    // 检查是否是自定义受信任的证书
+    const certPEM = certificate.data.toString()
+    const isTrustedCert = customTrustedCerts.some(trustedCert => {
+      // 移除证书中的空白字符进行比较
+      const cleanTrusted = trustedCert.replace(/\s/g, '')
+      const cleanCert = certPEM.replace(/\s/g, '')
+      return cleanTrusted === cleanCert
+    })
+
+    if (isTrustedCert) {
+      console.log(`✅ Certificate verified: Using custom trusted certificate for ${url}`)
+      callback(true)
+    } else if (process.env.NODE_ENV !== 'production') {
+      // 开发环境下允许所有证书
+      console.log(`⚠️  Certificate error bypassed in development mode for ${url}`)
+      callback(true)
+    } else {
+      console.warn(`❌ Certificate verification failed for ${url}: ${error}`)
+      callback(false)
+    }
+  })
+
   app.on('web-contents-created', (event, contents) => {
     contents.on('will-navigate', (event, navigationUrl) => {
       if (process.env.NODE_ENV !== 'production') {

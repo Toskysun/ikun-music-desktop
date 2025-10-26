@@ -72,3 +72,4 @@ src/**/*-internal.js
 # Project documentation (local only)
 CLAUDE.md
 BUILD_GUIDE.md
+.serena/

@@ -6,7 +6,44 @@ import { bHh } from './musicSdk/options'
 import { deflateRaw } from 'zlib'
 import { proxy } from '@renderer/store'
 import { httpOverHttp, httpsOverHttp } from 'tunnel'
+import { readFileSync, existsSync } from 'fs'
+import path from 'path'
 // import fs from 'fs'
+
+// 加载自定义 CA 证书
+const loadCustomCA = () => {
+  const customCAs = []
+
+  // 尝试从 window.api 获取用户数据路径
+  let userDataPath = ''
+  try {
+    // 在渲染进程中可能需要通过 IPC 获取路径，这里先用硬编码路径
+    userDataPath = process.env.APPDATA || process.env.HOME || ''
+  } catch (e) {
+    console.warn('Failed to get user data path:', e)
+  }
+
+  const certPaths = [
+    'D:\\Downloads\\reqable-ca.crt',
+    userDataPath ? path.join(userDataPath, 'custom-ca.crt') : '',
+  ].filter(Boolean)
+
+  for (const certPath of certPaths) {
+    try {
+      if (existsSync(certPath)) {
+        const cert = readFileSync(certPath)
+        customCAs.push(cert)
+        console.log(`✅ [Renderer] Loaded CA certificate: ${certPath}`)
+      }
+    } catch (err) {
+      console.warn(`⚠️  [Renderer] Failed to load CA certificate from ${certPath}:`, err)
+    }
+  }
+
+  return customCAs
+}
+
+const customCAs = loadCustomCA()
 
 const httpsRxp = /^https:/
 const getRequestAgent = (url) => {
@@ -301,16 +338,25 @@ const fetchData = async (
       ).toString('hex')}&${parseInt(v)}${v2}`
     delete headers[bHh]
   }
+
+  // 准备请求选项
+  const requestOptions = {
+    ...options,
+    method,
+    headers: Object.assign({}, defaultHeaders, headers),
+    timeout,
+    agent: getRequestAgent(url),
+    json: format === 'json',
+  }
+
+  // 如果有自定义 CA 证书，添加到请求选项
+  if (customCAs.length > 0) {
+    requestOptions.ca = customCAs
+  }
+
   return request(
     url,
-    {
-      ...options,
-      method,
-      headers: Object.assign({}, defaultHeaders, headers),
-      timeout,
-      agent: getRequestAgent(url),
-      json: format === 'json',
-    },
+    requestOptions,
     (err, resp, body) => {
       if (err) return callback(err, null)
       callback(null, resp, body)

@@ -2,6 +2,17 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Select platform to build'
+        required: true
+        type: choice
+        options:
+          - all
+          - windows
+          - windows-7
+          - mac
+          - linux
 
 permissions:
   contents: write
@@ -13,6 +24,7 @@ jobs:
   Windows:
     name: Windows
     runs-on: windows-latest
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' }}
     steps:
       - name: Check out git repository
         uses: actions/checkout@v4
@@ -51,6 +63,7 @@ jobs:
   Windows_7:
     name: Windows_7
     runs-on: windows-latest
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows-7' }}
     steps:
       - name: Check out git repository
         uses: actions/checkout@v4
@@ -90,6 +103,7 @@ jobs:
   Mac:
     name: Mac
     runs-on: macos-latest
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'mac' }}
     steps:
       - name: Check out git repository
         uses: actions/checkout@v4
@@ -128,6 +142,7 @@ jobs:
   Linux:
     name: Linux
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux' }}
     steps:
       - name: Install package
         run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools

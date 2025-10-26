@@ -56,17 +56,30 @@ export const createDownloadTasks = (
   listId?: string,
   fallbackStrategy: 'downgrade' | 'upgrade' | 'max' | 'min' = 'downgrade'
 ): LX.Download.ListItem[] => {
-  return list
-    .map((musicInfo) => {
-      return createDownloadInfo(musicInfo, quality, fileNameFormat, qualityList, listId, fallbackStrategy)
-    })
-    .filter((task) => task)
-  // commit('addTasks', { list: taskList, addMusicLocationType: rootState.setting.list.addMusicLocationType })
-  // let result = getStartTask(downloadList, DOWNLOAD_STATUS, rootState.setting.download.maxDownloadNum)
-  // while (result) {
-  //   dispatch('startTask', result)
-  //   result = getStartTask(downloadList, DOWNLOAD_STATUS, rootState.setting.download.maxDownloadNum)
-  // }
+  console.log('[worker/download] createDownloadTasks START')
+  console.log('[worker/download] Params:', { listCount: list.length, quality, fileNameFormat, listId, fallbackStrategy })
+
+  try {
+    const result = list
+      .map((musicInfo, index) => {
+        console.log(`[worker/download] Processing music ${index + 1}/${list.length}:`, musicInfo.name)
+        try {
+          const downloadInfo = createDownloadInfo(musicInfo, quality, fileNameFormat, qualityList, listId, fallbackStrategy)
+          console.log(`[worker/download] Created download info for ${musicInfo.name}:`, downloadInfo)
+          return downloadInfo
+        } catch (error) {
+          console.error(`[worker/download] Error creating download info for ${musicInfo.name}:`, error)
+          return null
+        }
+      })
+      .filter((task) => task !== null)
+
+    console.log('[worker/download] Final result count:', result.length)
+    return result
+  } catch (error) {
+    console.error('[worker/download] Fatal error in createDownloadTasks:', error)
+    throw error
+  }
 }
 
 const createTask = async (

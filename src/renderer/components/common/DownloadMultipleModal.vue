@@ -64,12 +64,23 @@ export default {
     }
   },
   methods: {
-    handleClick(quality) {
-      void createDownloadTasks(
-        this.list.filter((item) => item.source != 'local'),
-        quality,
-        this.listId
-      )
+    async handleClick(quality) {
+      console.log('[DownloadMultipleModal] Quality selected:', quality)
+      console.log('[DownloadMultipleModal] List to download:', this.list.filter((item) => item.source != 'local'))
+      console.log('[DownloadMultipleModal] ListId:', this.listId)
+
+      try {
+        await createDownloadTasks(
+          this.list.filter((item) => item.source != 'local'),
+          quality,
+          this.listId
+        )
+        console.log('[DownloadMultipleModal] Download tasks created successfully')
+      } catch (error) {
+        console.error('[DownloadMultipleModal] Error creating download tasks:', error)
+        alert('下载任务创建失败: ' + error.message)
+      }
+
       this.handleClose()
       this.$emit('confirm')
     },

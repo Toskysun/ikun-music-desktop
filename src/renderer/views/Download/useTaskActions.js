@@ -10,8 +10,11 @@ import {
   startDownloadTasks,
   pauseDownloadTasks,
   removeDownloadTasks,
+  cancelAllDownloadTasks,
+  clearCompletedDownloadTasks,
 } from '@renderer/store/download/action'
 import { openDirInExplorer } from '@renderer/utils/ipc'
+import { downloadStatus } from '@renderer/store/download/state'
 
 export default ({ list, selectedList, removeAllSelect }) => {
   const router = useRouter()
@@ -76,6 +79,33 @@ export default ({ list, selectedList, removeAllSelect }) => {
     openDirInExplorer(task.metadata.filePath)
   }
 
+  const handleCancelAll = async () => {
+    const count = await cancelAllDownloadTasks()
+    if (count > 0) {
+      // 可选：显示成功提示
+      console.log(`已取消 ${count} 个下载任务`)
+    }
+  }
+
+  const handleClearCompleted = async () => {
+    const count = await clearCompletedDownloadTasks()
+    if (count > 0) {
+      console.log(`已清空 ${count} 个下载任务`)
+    }
+  }
+
+  const handleStartAll = async () => {
+    // 找出所有暂停(PAUSE)和失败(ERROR)状态的任务
+    const tasksToStart = list.value.filter(
+      task => task.status === downloadStatus.PAUSE || task.status === downloadStatus.ERROR
+    )
+
+    if (tasksToStart.length > 0) {
+      startDownloadTasks(tasksToStart)
+      console.log(`已开始 ${tasksToStart.length} 个下载任务`)
+    }
+  }
+
   return {
     handleSearch,
     handleOpenMusicDetail,
@@ -83,5 +113,8 @@ export default ({ list, selectedList, removeAllSelect }) => {
     handlePauseTask,
     handleRemoveTask,
     handleOpenFile,
+    handleCancelAll,
+    handleClearCompleted,
+    handleStartAll,
   }
 }

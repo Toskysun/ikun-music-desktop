@@ -9,7 +9,35 @@ import needle, {
 import { httpOverHttp, httpsOverHttp } from 'tunnel'
 import { type ClientRequest } from 'node:http'
 import { getProxy } from './index'
+import { readFileSync, existsSync } from 'node:fs'
+import path from 'node:path'
+import { app } from 'electron'
 // import fs from 'fs'
+
+// 加载自定义 CA 证书
+const loadCustomCA = (): Buffer[] => {
+  const customCAs: Buffer[] = []
+  const certPaths = [
+    'D:\\Downloads\\reqable-ca.crt',
+    path.join(app.getPath('userData'), 'custom-ca.crt'),
+  ]
+
+  for (const certPath of certPaths) {
+    try {
+      if (existsSync(certPath)) {
+        const cert = readFileSync(certPath)
+        customCAs.push(cert)
+        console.log(`✅ Loaded CA certificate for HTTP requests: ${certPath}`)
+      }
+    } catch (err) {
+      console.warn(`⚠️  Failed to load CA certificate from ${certPath}:`, err)
+    }
+  }
+
+  return customCAs
+}
+
+const customCAs = loadCustomCA()
 
 export const requestMsg = {
   fail: '请求异常😮，可以多试几次，若还是不行就换一首吧。。。',
@@ -185,16 +213,25 @@ const fetchData = async (
   console.log('---start---', url)
   headers = Object.assign({}, headers)
 
+  // 准备请求选项
+  const requestOptions: any = {
+    ...options,
+    method,
+    headers: Object.assign({}, defaultHeaders, headers),
+    timeout,
+    agent: getRequestAgent(url),
+    json: format === 'json',
+  }
+
+  // 如果有自定义 CA 证书，添加到请求选项
+  if (customCAs.length > 0) {
+    requestOptions.ca = customCAs
+    console.log(`🔐 Using ${customCAs.length} custom CA certificate(s) for ${url}`)
+  }
+
   return request(
     url,
-    {
-      ...options,
-      method,
-      headers: Object.assign({}, defaultHeaders, headers),
-      timeout,
-      agent: getRequestAgent(url),
-      json: format === 'json',
-    },
+    requestOptions,
     (err, resp, body) => {
       callback(err, resp, body)
     }

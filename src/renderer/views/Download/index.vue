@@ -2,6 +2,24 @@
   <div :class="$style.download">
     <div :class="$style.header">
       <base-tab v-model="activeTab" :class="$style.tab" :list="tabs" />
+      <base-btn
+        v-if="list.length > 0"
+        @click="handleStartAll"
+      >
+        一键开始
+      </base-btn>
+      <base-btn
+        v-if="list.length > 0"
+        @click="handleCancelAll"
+      >
+        一键取消
+      </base-btn>
+      <base-btn
+        v-if="list.length > 0"
+        @click="handleClearCompleted"
+      >
+        一键清空
+      </base-btn>
     </div>
     <div :class="$style.content">
       <div class="thead" :class="$style.thead">
@@ -153,6 +171,9 @@ export default {
       handlePauseTask,
       handleRemoveTask,
       handleOpenFile,
+      handleCancelAll,
+      handleClearCompleted,
+      handleStartAll,
     } = useTaskActions({ list, removeAllSelect, selectedList })
 
     const {
@@ -272,6 +293,9 @@ export default {
       handleListItemRightClick,
       handleMenuClick,
       handleListBtnClick,
+      handleCancelAll,
+      handleClearCompleted,
+      handleStartAll,
 
       getName,
       getTypeName,
@@ -296,6 +320,17 @@ export default {
     }
   }
 }
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tab {
+  flex: 1;
+}
+
 .num {
   height: 100%;
   display: flex;
