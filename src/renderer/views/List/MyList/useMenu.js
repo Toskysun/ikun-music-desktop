@@ -15,6 +15,7 @@ export default ({
   handleExportList,
   handleUpdateSourceList,
   handleRemove,
+  handleDownloadList,
 }) => {
   const menuControl = reactive({
     rename: true,
@@ -25,6 +26,7 @@ export default ({
     import: true,
     export: true,
     sync: true,
+    download: true,
     remove: true,
   })
   const t = useI18n()
@@ -52,6 +54,11 @@ export default ({
         name: t('lists__select_local_file'),
         action: 'local_file',
         disabled: !menuControl.local_file,
+      },
+      {
+        name: t('lists__download'),
+        action: 'download',
+        disabled: !menuControl.download,
       },
       {
         name: t('lists__sync'),
@@ -163,6 +170,9 @@ export default ({
         break
       case 'local_file':
         addLocalFile(listInfo)
+        break
+      case 'download':
+        handleDownloadList(listInfo)
         break
       case 'sourceDetail':
         handleOpenSourceDetailPage(listInfo)

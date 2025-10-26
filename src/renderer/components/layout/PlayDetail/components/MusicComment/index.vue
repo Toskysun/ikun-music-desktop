@@ -167,7 +167,9 @@ export default {
           this.newComment.page = page
           this.newComment.list = comment.comments
           this.$nextTick(() => {
-            this.$refs.dom_commentNew.scrollTo(0, 0)
+            if (this.$refs.dom_commentNew) {
+              this.$refs.dom_commentNew.scrollTo(0, 0)
+            }
           })
         })
         .catch((err) => {
@@ -188,7 +190,9 @@ export default {
           this.hotComment.page = page
           this.hotComment.list = hotComment.comments
           this.$nextTick(() => {
-            this.$refs.dom_commentHot.scrollTo(0, 0)
+            if (this.$refs.dom_commentHot) {
+              this.$refs.dom_commentHot.scrollTo(0, 0)
+            }
           })
         })
         .catch((err) => {

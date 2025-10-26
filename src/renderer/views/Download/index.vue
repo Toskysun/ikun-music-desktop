@@ -264,8 +264,19 @@ export default {
         .replace('歌名', downloadInfo.metadata.musicInfo.name)
         .replace('歌手', downloadInfo.metadata.musicInfo.singer)
     }
+    const QUALITY_NAMES = {
+      master: 'Master',
+      atmos_plus: 'Atmos plus',
+      atmos: 'Atmos',
+      hires: 'Hires',
+      flac: 'Flac',
+      '320k': '320k',
+      '192k': '192k',
+      '128k': '128k',
+    }
+
     const getTypeName = (quality) => {
-      return quality == 'hires' ? 'FLAC Hires' : quality?.toUpperCase()
+      return QUALITY_NAMES[quality] || quality?.toUpperCase()
     }
     return {
       listRef,
