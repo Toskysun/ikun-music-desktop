@@ -203,6 +203,7 @@ import useEditList from './useEditList'
 import useListScroll from './useListScroll'
 import useDuplicate from './useDuplicate'
 import useDownload from './useDownload'
+import useAddToPlayList from './useAddToPlayList'
 
 export default {
   name: 'MyLists',
@@ -232,6 +233,7 @@ export default {
     const { isShowDuplicateMusicModal, duplicateListInfo, handleDuplicateList } = useDuplicate()
     const { handleDownloadList, isShowDownloadMultiple, downloadListInfo, downloadMusicList } =
       useDownload()
+    const { handleAddToPlayList } = useAddToPlayList()
     const { handleRename, handleSaveListName, isShowNewList, isNewListLeave, handleCreateList } =
       useEditList({ dom_lists_list })
     useListScroll({ dom_lists_list })
@@ -275,6 +277,7 @@ export default {
       handleSortList,
       handleDuplicateList,
       handleDownloadList,
+      handleAddToPlayList,
       handleRename,
       handleRemove,
     })
