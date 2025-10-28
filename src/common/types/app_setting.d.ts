@@ -183,6 +183,11 @@ declare global {
       'player.audioVisualization': boolean
 
       /**
+       * 是否启用播放详情页流光溢彩背景效果
+       */
+      'player.flowingGlowBackground': boolean
+
+      /**
        * 定时暂停播放-是否等待歌曲播放完毕再暂停
        */
       'player.waitPlayEndStop': boolean

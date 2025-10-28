@@ -546,6 +546,7 @@
   "setting__play_detail_font_zoom": "縮放目前正在播放的歌詞",
   "setting__play_detail_lyric_delay_scroll": "延遲歌詞滾動",
   "setting__play_detail_lyric_progress": "允許透過拖曳歌詞調整播放進度",
+  "setting__play_detail_flowing_glow_background": "啟用流光溢彩背景效果",
   "setting__play_lyric_lxlrc": "使用卡拉 OK 式歌詞播放（如果可用）",
   "setting__play_lyric_lxlrc_tip": "此功能比較耗性能，低配置電腦不建議開啟！",
   "setting__play_lyric_roma": "顯示歌詞羅馬音（如果可用）",

@@ -1,7 +1,21 @@
 <template lang="pug">
 transition(enter-active-class="animated slideInRight" leave-active-class="animated slideOutDown" @after-enter="handleAfterEnter" @after-leave="handleAfterLeave")
   div(v-if="isShowPlayerDetail" :class="[$style.container, { fullscreen: isFullscreen }]" @contextmenu="handleContextMenu")
-    div(:class="$style.bg")
+    //- 流光溢彩背景效果（可选）
+    transition(enter-active-class="animated fadeIn" leave-active-class="animated fadeOut")
+      flowing-glow-background(
+        v-if="appSetting['player.flowingGlowBackground'] && visibled && musicInfo.pic"
+        :album="musicInfo.pic"
+        :fps="60"
+        :flow-speed="1"
+        :render-scale="0.5"
+        :has-lyric="true"
+        @webgl-not-supported="handleWebGLNotSupported"
+        @init-failed="handleFlowingGlowInitFailed"
+        @init-success="handleFlowingGlowInitSuccess"
+      )
+    //- 静态背景（当流光溢彩效果关闭或WebGL不支持时）
+    div(v-if="!appSetting['player.flowingGlowBackground'] || !webglSupported" :class="$style.bg")
     //- div(:class="$style.bg" :style="bgStyle")
     //- div(:class="$style.bg2")
     ControlBtnsLeftHeader(v-if="appSetting['common.controlBtnPosition'] == 'left'")
@@ -44,6 +58,7 @@ import PlayBar from './PlayBar.vue'
 import MusicComment from './components/MusicComment/index.vue'
 import ControlBtnsLeftHeader from './ControlBtnsLeftHeader.vue'
 import ControlBtnsRightHeader from './ControlBtnsRightHeader.vue'
+import FlowingGlowBackground from './components/FlowingGlowBackground.vue'
 import { registerAutoHideMounse, unregisterAutoHideMounse } from './autoHideMounse'
 import { appSetting } from '@renderer/store/setting'
 import { closeWindow, maxWindow, minWindow, setFullScreen } from '@renderer/utils/ipc'
@@ -56,9 +71,11 @@ export default {
     LyricPlayer,
     PlayBar,
     MusicComment,
+    FlowingGlowBackground,
   },
   setup() {
     const visibled = ref(false)
+    const webglSupported = ref(true) // 跟踪WebGL支持状态
 
     let clickTime = 0
 
@@ -92,6 +109,22 @@ export default {
       unregisterAutoHideMounse()
     }
 
+    // WebGL降级处理
+    const handleWebGLNotSupported = (info) => {
+      console.warn('[PlayDetail] WebGL not supported, using static background:', info)
+      webglSupported.value = false
+    }
+
+    const handleFlowingGlowInitFailed = (error) => {
+      console.error('[PlayDetail] Flowing glow background init failed:', error)
+      webglSupported.value = false
+    }
+
+    const handleFlowingGlowInitSuccess = () => {
+      console.log('[PlayDetail] Flowing glow background initialized successfully')
+      webglSupported.value = true
+    }
+
     watch(isFullscreen, (isFullscreen) => {
       ;(isFullscreen ? registerAutoHideMounse : unregisterAutoHideMounse)()
     })
@@ -109,6 +142,10 @@ export default {
       handleAfterLeave,
       visibled,
       isFullscreen,
+      webglSupported,
+      handleWebGLNotSupported,
+      handleFlowingGlowInitFailed,
+      handleFlowingGlowInitSuccess,
       fullscreenExit() {
         void setFullScreen(false).then((fullscreen) => {
           isFullscreen.value = fullscreen

@@ -555,6 +555,7 @@
   "setting__play_detail_font_zoom": "Zoom currently playing lyrics",
   "setting__play_detail_lyric_delay_scroll": "Delay scrolling lyrics",
   "setting__play_detail_lyric_progress": "Allow to adjust playback progress by drag-and-drop lyrics",
+  "setting__play_detail_flowing_glow_background": "Enable flowing glow background effect",
   "setting__play_lyric_lxlrc": "Playback with karaoke-style lyrics if available",
   "setting__play_lyric_lxlrc_tip": "This feature requires higher performance and is not recommended to be turned on for low performance devices!",
   "setting__play_lyric_roma": "Show romanized lyrics if available",

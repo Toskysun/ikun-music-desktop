@@ -94,7 +94,7 @@ export const createWindow = () => {
       nodeIntegration: true,
       sandbox: false,
       enableWebSQL: false,
-      webgl: false,
+      webgl: true, // 启用WebGL以支持流光溢彩背景效果
       spellcheck: false, // 禁用拼写检查器
     },
   }
