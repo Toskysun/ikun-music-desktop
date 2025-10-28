@@ -1,9 +1,17 @@
 interface HTMLAudioElementChrome extends HTMLAudioElement {
   setSinkId: (id: string) => Promise<void>
 }
-let audio: HTMLAudioElementChrome | null = null
+
+// 双Audio元素系统 - 用于无缝切换
+let audioA: HTMLAudioElementChrome | null = null
+let audioB: HTMLAudioElementChrome | null = null
+let currentAudioId: 'A' | 'B' = 'A'  // 当前播放的audio
+let audio: HTMLAudioElementChrome | null = null  // 指向当前活跃的audio
+
 let audioContext: AudioContext
-let mediaSource: MediaElementAudioSourceNode
+let mediaSourceA: MediaElementAudioSourceNode | null = null
+let mediaSourceB: MediaElementAudioSourceNode | null = null
+let mediaSource: MediaElementAudioSourceNode  // 指向当前活跃的mediaSource
 let analyser: AnalyserNode
 // https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext
 // https://benzleung.gitbooks.io/web-audio-api-mini-guide/content/chapter5-1.html
@@ -187,11 +195,23 @@ export const soundR = 0.5
 
 export const createAudio = () => {
   if (audio) return
-  audio = new window.Audio() as HTMLAudioElementChrome
-  audio.controls = false
-  audio.autoplay = true
-  audio.preload = 'auto'
-  audio.crossOrigin = 'anonymous'
+
+  // 创建两个audio元素用于无缝切换
+  audioA = new window.Audio() as HTMLAudioElementChrome
+  audioA.controls = false
+  audioA.autoplay = true
+  audioA.preload = 'auto'
+  audioA.crossOrigin = 'anonymous'
+
+  audioB = new window.Audio() as HTMLAudioElementChrome
+  audioB.controls = false
+  audioB.autoplay = false  // B初始不自动播放
+  audioB.preload = 'auto'
+  audioB.crossOrigin = 'anonymous'
+
+  // 默认使用 audioA
+  audio = audioA
+  currentAudioId = 'A'
 }
 
 const initAnalyser = () => {
@@ -237,7 +257,7 @@ const initGain = () => {
 
 const initAdvancedAudioFeatures = () => {
   if (audioContext) return
-  if (!audio) throw new Error('audio not defined')
+  if (!audio || !audioA || !audioB) throw new Error('audio not defined')
   audioContext = new window.AudioContext({ latencyHint: 'playback' })
   defaultChannelCount = audioContext.destination.channelCount
 
@@ -246,9 +266,16 @@ const initAdvancedAudioFeatures = () => {
   initConvolver()
   initPanner()
   initGain()
+
+  // 创建双audio的mediaSource
   // source -> analyser -> biquadFilter -> pitchShifter -> [(convolver & convolverSource)->convolverDynamicsCompressor] -> panner -> gain
-  mediaSource = audioContext.createMediaElementSource(audio)
+  mediaSourceA = audioContext.createMediaElementSource(audioA)
+  mediaSourceB = audioContext.createMediaElementSource(audioB)
+
+  // 默认连接 mediaSourceA
+  mediaSource = mediaSourceA
   mediaSource.connect(analyser)
+
   analyser.connect(biquads.get(`hz${freqs[0]}`)!)
   const lastBiquadFilter = biquads.get(`hz${freqs.at(-1)!}`)!
   lastBiquadFilter.connect(convolverSourceGainNode)
@@ -520,6 +547,110 @@ export const setPitchShifter = (val: number) => {
 
 export const hasInitedAdvancedAudioFeatures = (): boolean => audioContext != null
 
+// ============ 双Audio无缝切换系统 ============
+
+/**
+ * 获取下一个待用的audio元素 (用于预加载)
+ */
+export const getNextAudio = (): HTMLAudioElementChrome | null => {
+  return currentAudioId === 'A' ? audioB : audioA
+}
+
+/**
+ * 获取当前活跃的audio ID
+ */
+export const getCurrentAudioId = (): 'A' | 'B' => {
+  return currentAudioId
+}
+
+/**
+ * 预加载下一首歌曲到备用audio
+ * @param src 音频URL
+ */
+export const preloadNextMusic = (src: string) => {
+  const nextAudio = getNextAudio()
+  if (!nextAudio) return
+
+  console.log(`Preloading next music to audio${currentAudioId === 'A' ? 'B' : 'A'}`)
+
+  nextAudio.src = src
+  nextAudio.load()  // 强制开始加载
+}
+
+/**
+ * 切换到下一个audio (无缝切换核心函数)
+ * @returns 是否切换成功
+ */
+export const switchToNextAudio = (): boolean => {
+  const nextAudio = getNextAudio()
+  const nextAudioId = currentAudioId === 'A' ? 'B' : 'A'
+
+  console.log(`🔄 Attempting to switch to audio${nextAudioId}`)
+  console.log(`   Next audio exists: ${!!nextAudio}`)
+  console.log(`   Next audio src: ${nextAudio?.src ? nextAudio.src.substring(0, 50) + '...' : 'EMPTY'}`)
+
+  if (!nextAudio || !nextAudio.src) {
+    console.warn(`❌ Next audio not ready for switch (audio${nextAudioId})`)
+    return false
+  }
+
+  // 如果AudioContext已初始化,切换mediaSource连接
+  if (audioContext && mediaSourceA && mediaSourceB) {
+    const currentMediaSource = mediaSource
+    const nextMediaSource = currentAudioId === 'A' ? mediaSourceB : mediaSourceA
+
+    // 断开当前mediaSource
+    currentMediaSource.disconnect()
+
+    // 连接下一个mediaSource
+    nextMediaSource.connect(analyser)
+    mediaSource = nextMediaSource
+
+    console.log(`🔊 Switched AudioContext connection to audio${nextAudioId}`)
+  }
+
+  // 停止当前audio
+  const currentAudio = audio
+  if (currentAudio) {
+    currentAudio.pause()
+    // 延迟清空src,避免影响切换
+    setTimeout(() => {
+      currentAudio.src = ''
+      currentAudio.removeAttribute('src')
+      console.log(`🧹 Cleaned up audio${currentAudioId}`)
+    }, 100)
+  }
+
+  // 切换到下一个audio
+  audio = nextAudio
+  currentAudioId = currentAudioId === 'A' ? 'B' : 'A'
+
+  console.log(`✅ Switched to audio${currentAudioId}, starting playback`)
+
+  // 立即播放
+  nextAudio.autoplay = true
+  void nextAudio.play().catch(err => {
+    console.error('❌ Failed to auto-play next audio:', err)
+  })
+
+  return true
+}
+
+/**
+ * 清空下一个audio的资源
+ */
+export const clearNextAudio = () => {
+  const nextAudio = getNextAudio()
+  if (nextAudio && nextAudio.src) {
+    nextAudio.pause()
+    nextAudio.src = ''
+    nextAudio.removeAttribute('src')
+    console.log(`Cleared next audio${currentAudioId === 'A' ? 'B' : 'A'}`)
+  }
+}
+
+// ============================================
+
 export const setResource = (src: string) => {
   if (audio) audio.src = src
 }
@@ -595,94 +726,115 @@ export const getDuration = () => {
 
 type Noop = () => void
 
+// 双Audio事件监听 - 同时监听两个audio元素
 export const onPlaying = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('playing', callback)
+  audioA.addEventListener('playing', callback)
+  audioB.addEventListener('playing', callback)
   return () => {
-    audio?.removeEventListener('playing', callback)
+    audioA?.removeEventListener('playing', callback)
+    audioB?.removeEventListener('playing', callback)
   }
 }
 
 export const onPause = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio?.addEventListener('pause', callback)
+  audioA.addEventListener('pause', callback)
+  audioB.addEventListener('pause', callback)
   return () => {
-    audio?.removeEventListener('pause', callback)
+    audioA?.removeEventListener('pause', callback)
+    audioB?.removeEventListener('pause', callback)
   }
 }
 
 export const onEnded = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('ended', callback)
+  audioA.addEventListener('ended', callback)
+  audioB.addEventListener('ended', callback)
   return () => {
-    audio?.removeEventListener('ended', callback)
+    audioA?.removeEventListener('ended', callback)
+    audioB?.removeEventListener('ended', callback)
   }
 }
 
 export const onError = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('error', callback)
+  audioA.addEventListener('error', callback)
+  audioB.addEventListener('error', callback)
   return () => {
-    audio?.removeEventListener('error', callback)
+    audioA?.removeEventListener('error', callback)
+    audioB?.removeEventListener('error', callback)
   }
 }
 
 export const onLoadeddata = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('loadeddata', callback)
+  audioA.addEventListener('loadeddata', callback)
+  audioB.addEventListener('loadeddata', callback)
   return () => {
-    audio?.removeEventListener('loadeddata', callback)
+    audioA?.removeEventListener('loadeddata', callback)
+    audioB?.removeEventListener('loadeddata', callback)
   }
 }
 
 export const onLoadstart = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('loadstart', callback)
+  audioA.addEventListener('loadstart', callback)
+  audioB.addEventListener('loadstart', callback)
   return () => {
-    audio?.removeEventListener('loadstart', callback)
+    audioA?.removeEventListener('loadstart', callback)
+    audioB?.removeEventListener('loadstart', callback)
   }
 }
 
 export const onCanplay = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('canplay', callback)
+  audioA.addEventListener('canplay', callback)
+  audioB.addEventListener('canplay', callback)
   return () => {
-    audio?.removeEventListener('canplay', callback)
+    audioA?.removeEventListener('canplay', callback)
+    audioB?.removeEventListener('canplay', callback)
   }
 }
 
 export const onEmptied = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('emptied', callback)
+  audioA.addEventListener('emptied', callback)
+  audioB.addEventListener('emptied', callback)
   return () => {
-    audio?.removeEventListener('emptied', callback)
+    audioA?.removeEventListener('emptied', callback)
+    audioB?.removeEventListener('emptied', callback)
   }
 }
 
 export const onTimeupdate = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('timeupdate', callback)
+  audioA.addEventListener('timeupdate', callback)
+  audioB.addEventListener('timeupdate', callback)
   return () => {
-    audio?.removeEventListener('timeupdate', callback)
+    audioA?.removeEventListener('timeupdate', callback)
+    audioB?.removeEventListener('timeupdate', callback)
   }
 }
 
 // 缓冲中
 export const onWaiting = (callback: Noop) => {
-  if (!audio) throw new Error('audio not defined')
+  if (!audioA || !audioB) throw new Error('audio not defined')
 
-  audio.addEventListener('waiting', callback)
+  audioA.addEventListener('waiting', callback)
+  audioB.addEventListener('waiting', callback)
   return () => {
-    audio?.removeEventListener('waiting', callback)
+    audioA?.removeEventListener('waiting', callback)
+    audioB?.removeEventListener('waiting', callback)
   }
 }
 

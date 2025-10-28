@@ -51,11 +51,29 @@ export default () => {
       playbackRate?: number
     } = {}
   ) => {
-    navigator.mediaSession.setPositionState({
-      duration: state.duration ?? getDuration(),
-      playbackRate: state.playbackRate ?? getPlaybackRate(),
-      position: state.position ?? getCurrentTime(),
-    })
+    try {
+      const duration = state.duration ?? getDuration()
+      const position = state.position ?? getCurrentTime()
+      const playbackRate = state.playbackRate ?? getPlaybackRate()
+
+      // 🎯 修复：验证参数有效性，避免 MediaSession API 错误
+      // 确保 duration 是有效的正数
+      if (!duration || !isFinite(duration) || duration <= 0) {
+        console.log('⚠️ Invalid duration, skipping position state update')
+        return
+      }
+
+      // 确保 position 不超过 duration
+      const safePosition = Math.max(0, Math.min(position, duration))
+
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate,
+        position: safePosition,
+      })
+    } catch (err) {
+      console.warn('Failed to update MediaSession position state:', err)
+    }
   }
 
   const setProgress = (time: number) => {

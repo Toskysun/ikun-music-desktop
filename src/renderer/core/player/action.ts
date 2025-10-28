@@ -1,4 +1,13 @@
-import { isEmpty, setPause, setPlay, setResource, setStop } from '@renderer/plugins/player'
+import {
+  isEmpty,
+  setPause,
+  setPlay,
+  setResource,
+  setStop,
+  preloadNextMusic,
+  switchToNextAudio,
+  clearNextAudio,
+} from '@renderer/plugins/player'
 import {
   isPlay,
   playedList,
@@ -108,11 +117,14 @@ const delayRetry = async (
 const getMusicPlayUrl = async (
   musicInfo: LX.Music.MusicInfo | LX.Download.ListItem,
   isRefresh = false,
-  isRetryed = false
+  isRetryed = false,
+  isPreload = false  // 🎯 新增：标记是否为预加载模式
 ): Promise<string | null> => {
   // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
-  setAllStatus(window.i18n.t('player__getting_url'))
-  if (appSetting['player.autoSkipOnError']) addLoadTimeout()
+  if (!isPreload) {
+    setAllStatus(window.i18n.t('player__getting_url'))
+    if (appSetting['player.autoSkipOnError']) addLoadTimeout()
+  }
 
   // const type = getPlayType(appSetting['player.highQuality'], musicInfo)
   let toggleMusicInfo = ('progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo).meta
@@ -132,28 +144,30 @@ const getMusicPlayUrl = async (
         musicInfo,
         isRefresh,
         onToggleSource(mInfo) {
-          if (diffCurrentMusicInfo(musicInfo)) return
-          setAllStatus(window.i18n.t('toggle_source_try'))
+          if (!isPreload && diffCurrentMusicInfo(musicInfo)) return  // 🎯 预加载模式跳过检查
+          if (!isPreload) setAllStatus(window.i18n.t('toggle_source_try'))
         },
       })
     })
     .then((url) => {
-      if (window.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo)) return null
+      // 🎯 预加载模式跳过当前音乐检查
+      if (!isPreload && (window.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo))) return null
 
       return url
     })
     .catch((err) => {
       // console.log('err', err.message)
       if (
-        window.lx.isPlayedStop ||
-        diffCurrentMusicInfo(musicInfo) ||
-        err.message == requestMsg.cancelRequest
+        !isPreload &&  // 🎯 预加载模式跳过检查
+        (window.lx.isPlayedStop ||
+          diffCurrentMusicInfo(musicInfo) ||
+          err.message == requestMsg.cancelRequest)
       )
         return null
 
       if (err.message == requestMsg.tooManyRequests) return delayRetry(musicInfo, isRefresh)
 
-      if (!isRetryed) return getMusicPlayUrl(musicInfo, isRefresh, true)
+      if (!isRetryed) return getMusicPlayUrl(musicInfo, isRefresh, true, isPreload)
 
       throw err
     })
@@ -171,6 +185,13 @@ export const setMusicUrl = (
     .then((url) => {
       if (!url) return
       setResource(url)
+
+      // 🎯 关键修复：清除"正在获取链接"等状态文本
+      setAllStatus('')
+
+      // 🎯 关键修复：URL设置成功后，立即预加载下一首
+      console.log('🔗 Current music URL set, triggering preload for next music')
+      void preloadNextMusicUrl()
     })
     .catch((err: any) => {
       console.log(err)
@@ -186,21 +207,51 @@ export const setMusicUrl = (
     })
 }
 
-// 恢复上次播放的状态
-const handleRestorePlay = async (restorePlayInfo: LX.Player.SavedPlayInfo) => {
-  const musicInfo = playMusicInfo.musicInfo
-  if (!musicInfo) return
+/**
+ * 预加载下一首歌曲的URL (双Audio无缝切换核心)
+ */
+const preloadNextMusicUrl = async () => {
+  try {
+    const nextPlayInfo = await getNextPlayMusicInfo()
+    if (!nextPlayInfo || !nextPlayInfo.musicInfo) {
+      console.log('No next music to preload')
+      return
+    }
 
-  setImmediate(() => {
-    if (musicInfo.id != playMusicInfo.musicInfo?.id) return
-    window.app_event.setProgress(
-      appSetting['player.isSavePlayTime'] ? restorePlayInfo.time : 0,
-      restorePlayInfo.maxTime
-    )
-    window.app_event.pause()
-  })
+    const nextMusicInfo = nextPlayInfo.musicInfo
+    // 处理 ListItem 类型
+    const musicName =
+      'progress' in nextMusicInfo ? nextMusicInfo.metadata.musicInfo.name : nextMusicInfo.name
+    const musicSinger =
+      'progress' in nextMusicInfo ? nextMusicInfo.metadata.musicInfo.singer : nextMusicInfo.singer
+    console.log(`🎵 Preloading next music: ${musicName} - ${musicSinger}`)
 
-  void getPicPath({ musicInfo, listId: playMusicInfo.listId })
+    // 🎯 关键修复：使用 isRefresh=true 获取新鲜URL，避免预加载URL过期
+    const url = await getMusicPlayUrl(nextMusicInfo, true, false, true)
+    if (!url) {
+      console.warn('❌ Failed to get URL for next music')
+      return
+    }
+
+    console.log(`🔗 Got preload URL: ${url.substring(0, 50)}...`)
+
+    // 检查当前播放是否已经改变 (避免过时的预加载)
+    if (nextPlayInfo.musicInfo.id !== (await getNextPlayMusicInfo())?.musicInfo?.id) {
+      console.log('⚠️ Current playing changed, cancel preload')
+      return
+    }
+
+    // 预加载到下一个audio元素
+    preloadNextMusic(url)
+    console.log(`✅ Next music preloaded successfully to backup audio`)
+  } catch (err) {
+    console.error('❌ Failed to preload next music:', err)
+  }
+}
+
+// 加载歌词和封面
+const loadLyricAndPic = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, listId: string | null) => {
+  void getPicPath({ musicInfo, listId: listId || '' })
     .then((url: string) => {
       if (musicInfo.id != playMusicInfo.musicInfo?.id || url == _musicInfo.pic) return
       setMusicInfo({ pic: url })
@@ -225,6 +276,24 @@ const handleRestorePlay = async (restorePlayInfo: LX.Player.SavedPlayInfo) => {
       if (musicInfo.id != playMusicInfo.musicInfo?.id) return
       setAllStatus(window.i18n.t('lyric__load_error'))
     })
+}
+
+// 恢复上次播放的状态
+const handleRestorePlay = async (restorePlayInfo: LX.Player.SavedPlayInfo) => {
+  const musicInfo = playMusicInfo.musicInfo
+  if (!musicInfo) return
+
+  setImmediate(() => {
+    if (musicInfo.id != playMusicInfo.musicInfo?.id) return
+    window.app_event.setProgress(
+      appSetting['player.isSavePlayTime'] ? restorePlayInfo.time : 0,
+      restorePlayInfo.maxTime
+    )
+    window.app_event.pause()
+  })
+
+  // 加载歌词和封面
+  loadLyricAndPic(musicInfo, playMusicInfo.listId)
 
   if (appSetting['player.togglePlayMethod'] == 'random' && !playMusicInfo.isTempPlay)
     addPlayedList({ ...(playMusicInfo as LX.Player.PlayMusicInfo) })
@@ -244,6 +313,9 @@ const handlePlay = () => {
 
   if (!musicInfo) return
 
+  // 清空下一个audio的预加载 (因为要播放新歌)
+  clearNextAudio()
+
   setStop()
   window.app_event.pause()
 
@@ -255,31 +327,10 @@ const handlePlay = () => {
 
   setMusicUrl(musicInfo)
 
-  void getPicPath({ musicInfo, listId: playMusicInfo.listId })
-    .then((url: string) => {
-      if (musicInfo.id != playMusicInfo.musicInfo?.id || url == _musicInfo.pic) return
-      setMusicInfo({ pic: url })
-      window.app_event.picUpdated()
-    })
-    .catch((_) => _)
+  // 加载歌词和封面
+  loadLyricAndPic(musicInfo, playMusicInfo.listId)
 
-  void getLyricInfo({ musicInfo })
-    .then((lyricInfo) => {
-      if (musicInfo.id != playMusicInfo.musicInfo?.id) return
-      setMusicInfo({
-        lrc: lyricInfo.lyric,
-        tlrc: lyricInfo.tlyric,
-        lxlrc: lyricInfo.lxlyric,
-        rlrc: lyricInfo.rlyric,
-        rawlrc: lyricInfo.rawlrcInfo.lyric,
-      })
-      window.app_event.lyricUpdated()
-    })
-    .catch((err) => {
-      console.log(err)
-      if (musicInfo.id != playMusicInfo.musicInfo?.id) return
-      setAllStatus(window.i18n.t('lyric__load_error'))
-    })
+  // 🎵 预加载已移至 setMusicUrl 成功回调中 (避免时序问题)
 }
 
 /**
@@ -422,9 +473,28 @@ export const getNextPlayMusicInfo = async (): Promise<LX.Player.PlayMusicInfo | 
 }
 
 const handlePlayNext = (playMusicInfo: LX.Player.PlayMusicInfo) => {
-  // pause()
-  setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
-  handlePlay()
+  // 尝试使用双Audio无缝切换
+  const switched = switchToNextAudio()
+
+  if (switched) {
+    // 无缝切换成功,只需更新播放信息
+    console.log('✅ Seamless switch successful')
+    setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
+
+    // 🎯 清除可能的"正在加载"状态文本
+    setAllStatus('')
+
+    // 🎯 加载歌词和封面
+    loadLyricAndPic(playMusicInfo.musicInfo, playMusicInfo.listId)
+
+    // 继续预加载下一首
+    void preloadNextMusicUrl()
+  } else {
+    // 回退到传统方式 (下一首未预加载或切换失败)
+    console.log('⚠️ Fallback to traditional play method')
+    setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
+    handlePlay()
+  }
 }
 /**
  * 下一曲
