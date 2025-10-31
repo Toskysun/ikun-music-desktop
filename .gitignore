@@ -73,3 +73,4 @@ src/**/*-internal.js
 CLAUDE.md
 BUILD_GUIDE.md
 .serena/
+doc/

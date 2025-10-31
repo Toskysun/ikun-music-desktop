@@ -64,7 +64,9 @@ export default () => {
   }
 
   const handleLoadeddata = () => {
-    setAllStatus(t('player__loading'))
+    // 🎯 修复：loadeddata表示数据已加载完成，不应该显示"加载中"
+    // 如果音频正在播放，清除加载状态；否则不做任何操作
+    // setAllStatus(t('player__loading'))  // ❌ 错误逻辑
   }
 
   const handlePlaying = () => {

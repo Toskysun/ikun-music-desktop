@@ -131,7 +131,10 @@ export const initSingleInstanceHandle = () => {
 
 export const applyElectronEnvParams = () => {
   // Is disable hardware acceleration
-  if (global.envParams.cmdParams.dha) app.disableHardwareAcceleration()
+  if (global.envParams.cmdParams.dha) {
+    app.disableHardwareAcceleration()
+    console.warn('⚠️  Hardware acceleration disabled - WebGL 2 will not be available')
+  }
   if (global.envParams.cmdParams.dhmkh)
     app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling')
 
@@ -141,7 +144,39 @@ export const applyElectronEnvParams = () => {
   // https://github.com/electron/electron/issues/22691
   app.commandLine.appendSwitch('wm-window-animations-disabled')
 
-  app.commandLine.appendSwitch('--disable-gpu-sandbox')
+  // WebGL 2 support configuration for Electron 39+
+  // These switches ensure WebGL 2 works properly in Chromium 142+
+  if (!global.envParams.cmdParams.dha) {
+    // ⚡ CRITICAL: Ignore GPU blocklist - allows WebGL 2 on all supported GPUs
+    app.commandLine.appendSwitch('ignore-gpu-blocklist')
+
+    // ⚠️ DO NOT force ANGLE backend - let Chromium choose (D3D11 on Windows is fine)
+    // app.commandLine.appendSwitch('use-angle', 'gl')  // This breaks WebGL on some systems!
+
+    // 🚀 Enable WebGL 2 and extensions
+    app.commandLine.appendSwitch('enable-webgl2-compute-context')
+    app.commandLine.appendSwitch('enable-webgl-draft-extensions')
+
+    // 💪 GPU acceleration optimizations
+    app.commandLine.appendSwitch('enable-gpu-rasterization')
+    app.commandLine.appendSwitch('enable-zero-copy')
+    app.commandLine.appendSwitch('disable-gpu-driver-bug-workarounds')
+    app.commandLine.appendSwitch('disable-gpu-sandbox')
+
+    // 🔥 NUCLEAR OPTION: Force disable software rendering
+    app.commandLine.appendSwitch('disable-software-rasterizer')
+
+    // 🎯 FORCE ENABLE WebGL 2 - Override all restrictions
+    app.commandLine.appendSwitch('enable-unsafe-webgpu')
+    app.commandLine.appendSwitch('enable-features', 'Vulkan,UseSkiaRenderer')
+
+    console.log('✅ WebGL 2 acceleration enabled (ignoring GPU blocklist)')
+    console.log('   - GPU blocklist: IGNORED')
+    console.log('   - ANGLE backend: AUTO (Chromium decides D3D11/OpenGL)')
+    console.log('   - Software rendering: DISABLED')
+    console.log('   - WebGPU: ENABLED (unsafe mode)')
+    console.log('   - Vulkan/Skia: ENABLED')
+  }
 
   // 支持自定义证书，允许抓包工具（如 Reqable）
   // 检查是否存在自定义证书文件

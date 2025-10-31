@@ -7,7 +7,9 @@ dd
     base-checkbox(id="setting_play_detail_lyric_delayScroll" :model-value="appSetting['playDetail.isDelayScroll']" :label="$t('setting__play_detail_lyric_delay_scroll')" @update:model-value="updateSetting({ 'playDetail.isDelayScroll': $event })")
   .gap-top
     base-checkbox(id="setting_play_detail_lyric_progress_enable" :model-value="appSetting['playDetail.isShowLyricProgressSetting']" :label="$t('setting__play_detail_lyric_progress')" @update:model-value="updateSetting({'playDetail.isShowLyricProgressSetting': $event})")
-  .gap-top
+
+  //- 🎁 流光溢彩设置（通过关于页面的彩蛋解锁）
+  .gap-top(v-if="showFlowingGlowSetting")
     base-checkbox(id="setting_play_detail_flowing_glow_background" :model-value="appSetting['player.flowingGlowBackground']" :label="$t('setting__play_detail_flowing_glow_background')" @update:model-value="updateSetting({'player.flowingGlowBackground': $event})")
 
 dd
@@ -20,15 +22,19 @@ dd
 </template>
 
 <script>
-// import { ref, onBeforeUnmount } from '@common/utils/vueTools'
+import { computed } from '@common/utils/vueTools'
 import { appSetting, updateSetting } from '@renderer/store/setting'
 
 export default {
   name: 'SettingPlayDetail',
   setup() {
+    // 🎁 从持久化设置中读取彩蛋解锁状态
+    const showFlowingGlowSetting = computed(() => appSetting['player.flowingGlowUnlocked'])
+
     return {
       appSetting,
       updateSetting,
+      showFlowingGlowSetting,
     }
   },
 }

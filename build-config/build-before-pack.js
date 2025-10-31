@@ -33,10 +33,34 @@ const replaceSqliteLib = async (electronNodeAbi, arch) => {
   // https://github.com/ikunshare/ikun-music-desktop/issues/1102
   // https://github.com/ikunshare/ikun-music-desktop/issues/1161
   console.log('replace sqlite lib...')
-  const filePath = path.join(
+
+  // Try to find the exact ABI version first
+  let filePath = path.join(
     __dirname,
     `./lib/better_sqlite3_electron-v${electronNodeAbi}-${better_sqlite3_fileNameMap[arch]}.node`
   )
+
+  // Fallback to v136 if exact version not found (Electron 39 compatibility)
+  if (!fs.existsSync(filePath)) {
+    const fallbackAbi = '136'
+    console.warn(
+      `Warning: better_sqlite3 for ABI v${electronNodeAbi} not found, falling back to v${fallbackAbi}`
+    )
+    filePath = path.join(
+      __dirname,
+      `./lib/better_sqlite3_electron-v${fallbackAbi}-${better_sqlite3_fileNameMap[arch]}.node`
+    )
+
+    // If fallback also doesn't exist, throw error with helpful message
+    if (!fs.existsSync(filePath)) {
+      throw new Error(
+        `better_sqlite3 native module not found for Electron ABI v${electronNodeAbi} or fallback v${fallbackAbi}. ` +
+        `Arch: ${arch}. ` +
+        `Please ensure the native module is compiled for your Electron version.`
+      )
+    }
+  }
+
   console.log(filePath)
   const targetPath = path.join(
     __dirname,
@@ -44,6 +68,7 @@ const replaceSqliteLib = async (electronNodeAbi, arch) => {
   )
   await fsPromises.unlink(targetPath).catch((_) => _)
   await fsPromises.copyFile(filePath, targetPath)
+  console.log(`Successfully copied better_sqlite3 from: ${path.basename(filePath)}`)
 }
 
 const replaceQrcDecodeLib = async (electronNodeAbi, platform, arch) => {
@@ -53,15 +78,40 @@ const replaceQrcDecodeLib = async (electronNodeAbi, platform, arch) => {
     electronNodeAbi,
     qrc_decode_fileNameMap[platform][arch]
   )
-  const filePath = path.join(
+
+  // Try to find the exact ABI version first
+  let filePath = path.join(
     __dirname,
     `./lib/qrc_decode_electron-v${electronNodeAbi}-${qrc_decode_fileNameMap[platform][arch]}.node`
   )
+
+  // Fallback to v136 if exact version not found (Electron 39 compatibility)
+  if (!fs.existsSync(filePath)) {
+    const fallbackAbi = '136'
+    console.warn(
+      `Warning: qrc_decode for ABI v${electronNodeAbi} not found, falling back to v${fallbackAbi}`
+    )
+    filePath = path.join(
+      __dirname,
+      `./lib/qrc_decode_electron-v${fallbackAbi}-${qrc_decode_fileNameMap[platform][arch]}.node`
+    )
+
+    // If fallback also doesn't exist, throw error with helpful message
+    if (!fs.existsSync(filePath)) {
+      throw new Error(
+        `qrc_decode native module not found for Electron ABI v${electronNodeAbi} or fallback v${fallbackAbi}. ` +
+        `Platform: ${platform}, Arch: ${arch}. ` +
+        `Please ensure the native module is compiled for your Electron version.`
+      )
+    }
+  }
+
   const targetPath = path.join(__dirname, '../build/Release/qrc_decode.node')
   const targetDir = path.dirname(targetPath)
   if (fs.existsSync(targetDir)) await fsPromises.unlink(targetPath).catch((_) => _)
   else await fsPromises.mkdir(targetDir, { recursive: true })
   await fsPromises.copyFile(filePath, targetPath)
+  console.log(`Successfully copied qrc_decode from: ${path.basename(filePath)}`)
 }
 
 module.exports = async (context) => {

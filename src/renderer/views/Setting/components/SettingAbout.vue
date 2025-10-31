@@ -35,13 +35,18 @@ dd
 
   .p.small
     | By:&nbsp;
-    strong 落雪无痕 && ikun0014 && Toskysun
+    span.credit-name(@click="handleCreditClick('落雪无痕')") 落雪无痕
+    span.credit-separator  &&
+    span.credit-name(@click="handleCreditClick('ikun0014')") ikun0014
+    span.credit-separator  &&
+    span.credit-name.easter-egg-trigger(@click="handleCreditClick('Toskysun')") Toskysun
 </template>
 
 <script>
-// import { ref, onBeforeUnmount } from '@common/utils/vueTools'
+import { ref } from '@common/utils/vueTools'
 import { isShowPact } from '@renderer/store'
 import { openUrl, clipboardWriteText } from '@common/utils/electron'
+import { appSetting, updateSetting } from '@renderer/store/setting'
 
 export default {
   name: 'SettingAbout',
@@ -49,11 +54,80 @@ export default {
     const handleShowPact = () => {
       isShowPact.value = true
     }
+
+    // 🎁 彩蛋：快速点击 Toskysun 5次解锁隐藏的流光溢彩功能
+    const clickCount = ref(0)
+    const lastClickTime = ref(0)
+    const CLICK_THRESHOLD = 5 // 需要点击的次数
+    const TIME_WINDOW = 500 // 时间窗口（毫秒）
+
+    const handleCreditClick = (name) => {
+      const now = Date.now()
+      const timeDiff = now - lastClickTime.value
+
+      // 如果点击间隔超过时间窗口，重置计数
+      if (timeDiff > TIME_WINDOW) {
+        clickCount.value = 1
+      } else {
+        clickCount.value++
+      }
+
+      lastClickTime.value = now
+
+      // 只有点击 Toskysun 才有效
+      if (name === 'Toskysun' && clickCount.value >= CLICK_THRESHOLD) {
+        // 解锁成功，将状态保存到设置中
+        updateSetting({ 'player.flowingGlowUnlocked': true })
+        console.log('🎉 彩蛋已解锁！请前往播放详细页设置查看流光溢彩选项')
+
+        // 重置计数，防止重复触发
+        clickCount.value = 0
+      }
+
+      // 调试信息
+      console.log(`[Easter Egg] ${name} clicked, count: ${clickCount.value}/${CLICK_THRESHOLD}`)
+    }
+
     return {
       openUrl,
       clipboardWriteText,
       handleShowPact,
+      handleCreditClick,
+      appSetting,
     }
   },
 }
 </script>
+
+<style lang="less" scoped>
+// 彩蛋入口样式
+.credit-name {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 1px 3px;
+  border-radius: 3px;
+
+  &:hover {
+    color: var(--color-primary);
+    background: var(--color-primary-alpha-100);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.easter-egg-trigger {
+  // 最后的 Toskysun 有特殊样式提示
+  font-weight: 600;
+
+  &:hover {
+    color: var(--color-theme);
+    background: var(--color-theme-alpha-100);
+  }
+}
+
+.credit-separator {
+  user-select: none;
+}
+</style>

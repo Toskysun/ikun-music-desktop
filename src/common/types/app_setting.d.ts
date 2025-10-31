@@ -188,6 +188,11 @@ declare global {
       'player.flowingGlowBackground': boolean
 
       /**
+       * 流光溢彩功能是否已通过彩蛋解锁
+       */
+      'player.flowingGlowUnlocked': boolean
+
+      /**
        * 定时暂停播放-是否等待歌曲播放完毕再暂停
        */
       'player.waitPlayEndStop': boolean

@@ -11,15 +11,52 @@ import {
   EplorRenderer,
 } from '@applemusic-like-lyrics/core'
 
-// WebGL检测函数
-const checkWebGLSupport = (): { webgl1: boolean; webgl2: boolean } => {
-  const canvas = document.createElement('canvas')
-  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
-  const gl2 = canvas.getContext('webgl2')
+// WebGL检测函数（增强版 - 提供详细诊断信息）
+const checkWebGLSupport = (): {
+  webgl1: boolean
+  webgl2: boolean
+  diagnostics?: string
+} => {
+  // 🔧 CRITICAL FIX: Use separate canvases for each context type
+  // A canvas can only have ONE rendering context - once getContext() is called,
+  // you cannot get a different context type on the same canvas!
+
+  // Test WebGL 1.0 with dedicated canvas
+  const canvas1 = document.createElement('canvas')
+  const gl = (canvas1.getContext('webgl') || canvas1.getContext('experimental-webgl')) as WebGLRenderingContext | null
+
+  // Test WebGL 2.0 with SEPARATE canvas (critical!)
+  const canvas2 = document.createElement('canvas')
+  let gl2: WebGL2RenderingContext | null = null
+  let diagnostics = ''
+
+  try {
+    console.log('[WebGL2 Detection] Attempting getContext("webgl2") on fresh canvas...')
+    gl2 = canvas2.getContext('webgl2') as WebGL2RenderingContext | null
+
+    console.log('[WebGL2 Detection] Result:', gl2 ? '✅ SUCCESS' : '❌ FAILED')
+
+    if (!gl2 && gl) {
+      // WebGL 1可用但WebGL 2不可用 - 收集诊断信息
+      const glContext = gl as WebGLRenderingContext
+      const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info')
+      if (debugInfo) {
+        const vendor = glContext.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL)
+        const renderer = glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+        diagnostics = `GPU: ${vendor} - ${renderer}. WebGL 2 may be disabled by GPU blocklist.`
+      } else {
+        diagnostics = 'WebGL 1 is available, but WebGL 2 context creation failed. Check Electron GPU settings.'
+      }
+    }
+  } catch (error) {
+    console.error('[WebGL2 Detection] Exception caught:', error)
+    diagnostics = `WebGL 2 context creation threw error: ${error instanceof Error ? error.message : String(error)}`
+  }
 
   return {
     webgl1: !!gl,
     webgl2: !!gl2,
+    diagnostics: diagnostics || undefined,
   }
 }
 
@@ -96,11 +133,21 @@ export default {
           ? 'WebGL 1.0 is supported, but WebGL 2.0 is required for flowing glow background'
           : 'WebGL is not supported by your system'
 
-        console.warn(`[FlowingGlowBackground] ${supportInfo}. Falling back to static background.`)
+        const fullDiagnostics = webglSupport.diagnostics
+          ? `${supportInfo}. ${webglSupport.diagnostics}`
+          : supportInfo
+
+        console.warn(`[FlowingGlowBackground] ${fullDiagnostics}`)
+        console.warn('[FlowingGlowBackground] Troubleshooting:')
+        console.warn('  1. Ensure hardware acceleration is enabled in Electron')
+        console.warn('  2. Check that GPU is not blocked by Chromium blocklist')
+        console.warn('  3. Verify GPU drivers are up to date')
+        console.warn('  4. Restart the application after GPU driver updates')
+
         emit('webgl-not-supported', {
           hasWebGL1: webglSupport.webgl1,
           hasWebGL2: webglSupport.webgl2,
-          message: supportInfo,
+          message: fullDiagnostics,
         })
         isWebGLSupported.value = false
         return
@@ -141,7 +188,7 @@ export default {
         }
 
         emit('init-success')
-        console.log('[FlowingGlowBackground] Successfully initialized with WebGL2')
+        console.log('[FlowingGlowBackground] Successfully initialized with WebGL 2')
       } catch (error) {
         console.error('[FlowingGlowBackground] Failed to initialize:', error)
         emit('init-failed', { error })
@@ -220,7 +267,15 @@ export default {
     )
 
     onMounted(() => {
-      initBackgroundRender()
+      // 🔧 FIX: Delay initialization to ensure GPU process is fully ready
+      // Electron's GPU context may not be available immediately on component mount
+      console.log('[FlowingGlowBackground] Component mounted, delaying WebGL initialization...')
+
+      // Wait for GPU context to be ready (100ms should be enough)
+      setTimeout(() => {
+        console.log('[FlowingGlowBackground] Starting WebGL initialization after delay...')
+        initBackgroundRender()
+      }, 100)
     })
 
     onBeforeUnmount(() => {
@@ -252,5 +307,18 @@ export default {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+
+  // 添加深色遮罩层，降低背景亮度，提升前景文字和图标的可读性
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4); // 40% 不透明度的黑色遮罩
+    pointer-events: none;
+    z-index: 1; // 确保遮罩在 canvas 上方
+  }
 }
 </style>

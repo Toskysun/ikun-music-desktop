@@ -144,6 +144,8 @@ export default () => {
   window.key_event.on(HOTKEY_PLAYER.music_dislike.action, dislikeMusic)
   window.key_event.on(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward)
   window.key_event.on(HOTKEY_PLAYER.seekforward.action, handleSeekforward)
+  // 空格键暂停/播放
+  window.key_event.on('key_space_down', togglePlay)
 
   window.app_event.on('play', setPlayStatus)
   window.app_event.on('pause', setPauseStatus)
@@ -166,6 +168,8 @@ export default () => {
     window.key_event.off(HOTKEY_PLAYER.music_dislike.action, dislikeMusic)
     window.key_event.off(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward)
     window.key_event.off(HOTKEY_PLAYER.seekforward.action, handleSeekforward)
+    // 移除空格键监听
+    window.key_event.off('key_space_down', togglePlay)
 
     window.app_event.off('play', setPlayStatus)
     window.app_event.off('pause', setPauseStatus)

@@ -10,49 +10,96 @@ import {
   onEmptied,
   onWaiting,
   getErrorCode,
+  getCurrentAudioId,
 } from '@renderer/plugins/player'
 
 export default () => {
-  const rOnPlaying = onPlaying(() => {
-    console.log('onPlaying')
+  // 🎯 修复：只响应当前活跃audio的事件，忽略预加载audio的事件
+  const rOnPlaying = onPlaying((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onPlaying from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onPlaying from audio${audioId}`)
     window.app_event.playerPlaying()
     window.app_event.play()
   })
-  const rOnPause = onPause(() => {
-    console.log('onPause')
+  const rOnPause = onPause((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onPause from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onPause from audio${audioId}`)
     window.app_event.playerPause()
     window.app_event.pause()
   })
-  const rOnEnded = onEnded(() => {
-    console.log('onEnded')
+  const rOnEnded = onEnded((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onEnded from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onEnded from audio${audioId}`)
     window.app_event.playerEnded()
     // window.app_event.pause()
   })
-  const rOnError = onError(() => {
-    console.log('onError')
+  const rOnError = onError((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onError from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onError from audio${audioId}`)
     const errorCode = getErrorCode()
     window.app_event.error(errorCode)
     window.app_event.playerError(errorCode)
   })
-  const rOnLoadeddata = onLoadeddata(() => {
-    console.log('onLoadeddata')
+  const rOnLoadeddata = onLoadeddata((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onLoadeddata from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onLoadeddata from audio${audioId}`)
     window.app_event.playerLoadeddata()
   })
-  const rOnLoadstart = onLoadstart(() => {
-    console.log('onLoadstart')
+  const rOnLoadstart = onLoadstart((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onLoadstart from audio${audioId} (current: audio${currentId}) - 预加载不触发状态更新`)
+      return
+    }
+    console.log(`[ACTIVE] onLoadstart from audio${audioId}`)
     window.app_event.playerLoadstart()
   })
-  const rOnCanplay = onCanplay(() => {
-    console.log('onCanplay')
+  const rOnCanplay = onCanplay((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onCanplay from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onCanplay from audio${audioId}`)
     window.app_event.playerCanplay()
   })
-  const rOnEmptied = onEmptied(() => {
-    console.log('onEmptied')
+  const rOnEmptied = onEmptied((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onEmptied from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onEmptied from audio${audioId}`)
     window.app_event.playerEmptied()
     // window.app_event.stop()
   })
-  const rOnWaiting = onWaiting(() => {
-    console.log('onWaiting')
+  const rOnWaiting = onWaiting((audioId) => {
+    const currentId = getCurrentAudioId()
+    if (audioId !== currentId) {
+      console.log(`[IGNORED] onWaiting from audio${audioId} (current: audio${currentId})`)
+      return
+    }
+    console.log(`[ACTIVE] onWaiting from audio${audioId}`)
     window.app_event.pause()
     window.app_event.playerWaiting()
   })

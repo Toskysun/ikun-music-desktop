@@ -186,8 +186,12 @@ export const setMusicUrl = (
       if (!url) return
       setResource(url)
 
-      // 🎯 关键修复：清除"正在获取链接"等状态文本
-      setAllStatus('')
+      // 🎯 关键修复：延迟清除状态，确保在 loadstart 事件处理之后执行
+      // setResource 会同步触发 loadstart 事件，导致状态被重新设置
+      // 使用 setTimeout 将清除操作推迟到下一个事件循环
+      setTimeout(() => {
+        setAllStatus('')
+      }, 0)
 
       // 🎯 关键修复：URL设置成功后，立即预加载下一首
       console.log('🔗 Current music URL set, triggering preload for next music')
@@ -313,10 +317,10 @@ const handlePlay = () => {
 
   if (!musicInfo) return
 
-  // 清空下一个audio的预加载 (因为要播放新歌)
-  clearNextAudio()
-
-  setStop()
+  // 🎯 关键修复：立即停止所有audio避免重叠
+  setPause()  // 先暂停当前audio
+  clearNextAudio()  // 清空并暂停下一个audio的预加载
+  setStop()  // 清空当前audio的src
   window.app_event.pause()
 
   clearDelayNextTimeout()
@@ -472,29 +476,57 @@ export const getNextPlayMusicInfo = async (): Promise<LX.Player.PlayMusicInfo | 
   return nextPlayMusicInfo
 }
 
-const handlePlayNext = (playMusicInfo: LX.Player.PlayMusicInfo) => {
-  // 尝试使用双Audio无缝切换
-  const switched = switchToNextAudio()
+const handlePlayNext = (playMusicInfo: LX.Player.PlayMusicInfo, allowSeamlessSwitch = false) => {
+  // 只在自动播放下一首时尝试无缝切换
+  if (allowSeamlessSwitch) {
+    const switched = switchToNextAudio()
 
-  if (switched) {
-    // 无缝切换成功,只需更新播放信息
-    console.log('✅ Seamless switch successful')
-    setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
+    if (switched) {
+      // 无缝切换成功,只需更新播放信息
+      console.log('✅ Seamless switch successful (auto-play next)')
+      setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
 
-    // 🎯 清除可能的"正在加载"状态文本
-    setAllStatus('')
+      // 🎯 关键修复：清除旧的加载状态文本（双audio切换不会触发setMusicUrl）
+      setAllStatus('')
 
-    // 🎯 加载歌词和封面
-    loadLyricAndPic(playMusicInfo.musicInfo, playMusicInfo.listId)
+      // 加载歌词和封面
+      const musicInfo = playMusicInfo.musicInfo
+      void getPicPath({ musicInfo, listId: playMusicInfo.listId })
+        .then((url: string) => {
+          if (musicInfo.id != playMusicInfo.musicInfo?.id || url == _musicInfo.pic) return
+          setMusicInfo({ pic: url })
+          window.app_event.picUpdated()
+        })
+        .catch((_) => _)
 
-    // 继续预加载下一首
-    void preloadNextMusicUrl()
-  } else {
-    // 回退到传统方式 (下一首未预加载或切换失败)
-    console.log('⚠️ Fallback to traditional play method')
-    setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
-    handlePlay()
+      void getLyricInfo({ musicInfo })
+        .then((lyricInfo) => {
+          if (musicInfo.id != playMusicInfo.musicInfo?.id) return
+          setMusicInfo({
+            lrc: lyricInfo.lyric,
+            tlrc: lyricInfo.tlyric,
+            lxlrc: lyricInfo.lxlyric,
+            rlrc: lyricInfo.rlyric,
+            rawlrc: lyricInfo.rawlrcInfo.lyric,
+          })
+          window.app_event.lyricUpdated()
+        })
+        .catch((err) => {
+          console.log(err)
+          if (musicInfo.id != playMusicInfo.musicInfo?.id) return
+          setAllStatus(window.i18n.t('lyric__load_error'))
+        })
+
+      // 继续预加载下一首
+      void preloadNextMusicUrl()
+      return
+    }
   }
+
+  // 手动切歌或无缝切换失败 - 使用传统方式
+  console.log(allowSeamlessSwitch ? '⚠️ Seamless switch failed, fallback to traditional' : '📍 Manual switch - using traditional play method')
+  setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
+  handlePlay()
 }
 /**
  * 下一曲
@@ -507,7 +539,7 @@ export const playNext = async (isAutoToggle = false): Promise<void> => {
     // 如果稍后播放列表存在歌曲则直接播放改列表的歌曲
     const playMusicInfo = tempPlayList[0]
     removeTempPlayList(0)
-    handlePlayNext(playMusicInfo)
+    handlePlayNext(playMusicInfo, isAutoToggle)
     console.log('play temp list')
     return
   }
@@ -554,13 +586,13 @@ export const playNext = async (isAutoToggle = false): Promise<void> => {
     }
 
     if (index < playedList.length) {
-      handlePlayNext(playedList[index])
+      handlePlayNext(playedList[index], isAutoToggle)
       console.log('play played list')
       return
     }
   }
   if (randomNextMusicInfo.info) {
-    handlePlayNext(randomNextMusicInfo.info)
+    handlePlayNext(randomNextMusicInfo.info, isAutoToggle)
     return
   }
   // const isCheckFile = findNum > 2 // 针对下载列表，如果超过两次都碰到无效歌曲，则过滤整个列表内的无效歌曲
@@ -617,7 +649,7 @@ export const playNext = async (isAutoToggle = false): Promise<void> => {
     musicInfo: filteredList[nextIndex],
     listId: currentListId,
     isTempPlay: false,
-  })
+  }, isAutoToggle)
 }
 
 /**
@@ -661,7 +693,7 @@ export const playPrev = async (isAutoToggle = false): Promise<void> => {
     }
 
     if (index > -1) {
-      handlePlayNext(playedList[index])
+      handlePlayNext(playedList[index], false)  // 上一首不使用无缝切换
       return
     }
   }
@@ -714,7 +746,7 @@ export const playPrev = async (isAutoToggle = false): Promise<void> => {
     musicInfo: filteredList[nextIndex],
     listId: currentListId,
     isTempPlay: false,
-  })
+  }, false)  // 上一首不使用无缝切换
 }
 
 /**
