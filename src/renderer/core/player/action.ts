@@ -118,7 +118,7 @@ const getMusicPlayUrl = async (
   musicInfo: LX.Music.MusicInfo | LX.Download.ListItem,
   isRefresh = false,
   isRetryed = false,
-  isPreload = false  // 🎯 新增：标记是否为预加载模式
+  isPreload = false  // 新增标记是否为预加载模式
 ): Promise<string | null> => {
   // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
   if (!isPreload) {
@@ -144,13 +144,13 @@ const getMusicPlayUrl = async (
         musicInfo,
         isRefresh,
         onToggleSource(mInfo) {
-          if (!isPreload && diffCurrentMusicInfo(musicInfo)) return  // 🎯 预加载模式跳过检查
+          if (!isPreload && diffCurrentMusicInfo(musicInfo)) return  // 预加载模式跳过检查
           if (!isPreload) setAllStatus(window.i18n.t('toggle_source_try'))
         },
       })
     })
     .then((url) => {
-      // 🎯 预加载模式跳过当前音乐检查
+      // 预加载模式跳过当前音乐检查
       if (!isPreload && (window.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo))) return null
 
       return url
@@ -158,7 +158,7 @@ const getMusicPlayUrl = async (
     .catch((err) => {
       // console.log('err', err.message)
       if (
-        !isPreload &&  // 🎯 预加载模式跳过检查
+        !isPreload &&  // 预加载模式跳过检查
         (window.lx.isPlayedStop ||
           diffCurrentMusicInfo(musicInfo) ||
           err.message == requestMsg.cancelRequest)
@@ -186,14 +186,14 @@ export const setMusicUrl = (
       if (!url) return
       setResource(url)
 
-      // 🎯 关键修复：延迟清除状态，确保在 loadstart 事件处理之后执行
+      // 关键修复延迟清除状态，确保在 loadstart 事件处理之后执行
       // setResource 会同步触发 loadstart 事件，导致状态被重新设置
       // 使用 setTimeout 将清除操作推迟到下一个事件循环
       setTimeout(() => {
         setAllStatus('')
       }, 0)
 
-      // 🎯 关键修复：URL设置成功后，立即预加载下一首
+      // 关键修复URL设置成功后，立即预加载下一首
       console.log('🔗 Current music URL set, triggering preload for next music')
       void preloadNextMusicUrl()
     })
@@ -230,7 +230,7 @@ const preloadNextMusicUrl = async () => {
       'progress' in nextMusicInfo ? nextMusicInfo.metadata.musicInfo.singer : nextMusicInfo.singer
     console.log(`🎵 Preloading next music: ${musicName} - ${musicSinger}`)
 
-    // 🎯 关键修复：使用 isRefresh=true 获取新鲜URL，避免预加载URL过期
+    // 关键修复使用 isRefresh=true 获取新鲜URL，避免预加载URL过期
     const url = await getMusicPlayUrl(nextMusicInfo, true, false, true)
     if (!url) {
       console.warn('❌ Failed to get URL for next music')
@@ -317,7 +317,7 @@ const handlePlay = () => {
 
   if (!musicInfo) return
 
-  // 🎯 关键修复：立即停止所有audio避免重叠
+  // 关键修复立即停止所有audio避免重叠
   setPause()  // 先暂停当前audio
   clearNextAudio()  // 清空并暂停下一个audio的预加载
   setStop()  // 清空当前audio的src
@@ -334,7 +334,7 @@ const handlePlay = () => {
   // 加载歌词和封面
   loadLyricAndPic(musicInfo, playMusicInfo.listId)
 
-  // 🎵 预加载已移至 setMusicUrl 成功回调中 (避免时序问题)
+  // 预加载已移至 setMusicUrl 成功回调中 (避免时序问题)
 }
 
 /**
@@ -486,8 +486,12 @@ const handlePlayNext = (playMusicInfo: LX.Player.PlayMusicInfo, allowSeamlessSwi
       console.log('✅ Seamless switch successful (auto-play next)')
       setPlayMusicInfo(playMusicInfo.listId, playMusicInfo.musicInfo, playMusicInfo.isTempPlay)
 
-      // 🎯 关键修复：清除旧的加载状态文本（双audio切换不会触发setMusicUrl）
+      // 关键修复清除旧的加载状态文本（双audio切换不会触发setMusicUrl）
       setAllStatus('')
+
+      // 关键修复手动触发playerLoadeddata事件更新duration
+      // 因为切换到的audio的loadeddata事件在预加载时被过滤了
+      window.app_event.playerLoadeddata()
 
       // 加载歌词和封面
       const musicInfo = playMusicInfo.musicInfo
@@ -536,9 +540,12 @@ const handlePlayNext = (playMusicInfo: LX.Player.PlayMusicInfo, allowSeamlessSwi
 export const playNext = async (isAutoToggle = false): Promise<void> => {
   console.log('skip next', isAutoToggle)
   if (tempPlayList.length) {
-    // 如果稍后播放列表存在歌曲则直接播放改列表的歌曲
+    // 修复 如果稍后播放列表存在歌曲则直接播放改列表的歌曲
+    // 当添加稍后播放时已经预加载了第一首稍后播放歌曲，所以可以使用无缝切换
     const playMusicInfo = tempPlayList[0]
     removeTempPlayList(0)
+
+    // 修复 支持无缝切换，因为在addTempPlayList时已经预加载了正确的歌曲
     handlePlayNext(playMusicInfo, isAutoToggle)
     console.log('play temp list')
     return

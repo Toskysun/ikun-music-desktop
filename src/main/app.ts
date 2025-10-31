@@ -147,26 +147,26 @@ export const applyElectronEnvParams = () => {
   // WebGL 2 support configuration for Electron 39+
   // These switches ensure WebGL 2 works properly in Chromium 142+
   if (!global.envParams.cmdParams.dha) {
-    // ⚡ CRITICAL: Ignore GPU blocklist - allows WebGL 2 on all supported GPUs
+    // CRITICAL Ignore GPU blocklist - allows WebGL 2 on all supported GPUs
     app.commandLine.appendSwitch('ignore-gpu-blocklist')
 
     // ⚠️ DO NOT force ANGLE backend - let Chromium choose (D3D11 on Windows is fine)
     // app.commandLine.appendSwitch('use-angle', 'gl')  // This breaks WebGL on some systems!
 
-    // 🚀 Enable WebGL 2 and extensions
+    // Enable WebGL 2 and extensions
     app.commandLine.appendSwitch('enable-webgl2-compute-context')
     app.commandLine.appendSwitch('enable-webgl-draft-extensions')
 
-    // 💪 GPU acceleration optimizations
+    // GPU acceleration optimizations
     app.commandLine.appendSwitch('enable-gpu-rasterization')
     app.commandLine.appendSwitch('enable-zero-copy')
     app.commandLine.appendSwitch('disable-gpu-driver-bug-workarounds')
     app.commandLine.appendSwitch('disable-gpu-sandbox')
 
-    // 🔥 NUCLEAR OPTION: Force disable software rendering
+    // NUCLEAR OPTION Force disable software rendering
     app.commandLine.appendSwitch('disable-software-rasterizer')
 
-    // 🎯 FORCE ENABLE WebGL 2 - Override all restrictions
+    // FORCE ENABLE WebGL 2 - Override all restrictions
     app.commandLine.appendSwitch('enable-unsafe-webgpu')
     app.commandLine.appendSwitch('enable-features', 'Vulkan,UseSkiaRenderer')
 

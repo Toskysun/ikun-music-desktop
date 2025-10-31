@@ -1,11 +1,32 @@
 import { onBeforeUnmount, watch } from '@common/utils/vueTools'
-import { debounce } from '@common/utils/common'
+import { debounce, throttle } from '@common/utils/common'
 // import { setDesktopLyricInfo, onGetDesktopLyricInfo } from '@renderer/utils/ipc'
 // import { musicInfo } from '@renderer/store/player/state'
 import { pause, play, setLyric, stop, init, sendInfo, setPlaybackRate } from '@renderer/core/lyric'
 import { appSetting } from '@renderer/store/setting'
+import { getCurrentTime as getPlayerCurrentTime } from '@renderer/plugins/player'
+import { isPlay } from '@renderer/store/player/state'
 
 const handleApplyPlaybackRate = debounce(setPlaybackRate, 300)
+
+const handleSetProgress = () => {
+  // Sync lyric to current playback position when progress changes
+  play()
+  // If music is paused, pause lyric immediately after seeking
+  if (!isPlay.value) {
+    pause()
+  }
+}
+
+// Throttle progress dragging updates to avoid performance issues
+const handleProgressDragging = throttle(() => {
+  // Real-time lyric sync during progress bar dragging
+  play()
+  // Keep lyric paused if music is paused
+  if (!isPlay.value) {
+    pause()
+  }
+}, 100) // Update every 100ms during dragging
 
 export default () => {
   init()
@@ -27,6 +48,8 @@ export default () => {
   window.app_event.on('musicToggled', setPlayInfo)
   window.app_event.on('lyricUpdated', setLyric)
   window.app_event.on('setPlaybackRate', handleApplyPlaybackRate)
+  window.app_event.on('setProgress', handleSetProgress)
+  window.app_event.on('progressDragging', handleProgressDragging)
 
   onBeforeUnmount(() => {
     window.app_event.off('play', play)
@@ -36,5 +59,7 @@ export default () => {
     window.app_event.off('musicToggled', setPlayInfo)
     window.app_event.off('lyricUpdated', setLyric)
     window.app_event.off('setPlaybackRate', handleApplyPlaybackRate)
+    window.app_event.off('setProgress', handleSetProgress)
+    window.app_event.off('progressDragging', handleProgressDragging)
   })
 }

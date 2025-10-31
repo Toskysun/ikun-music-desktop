@@ -573,7 +573,7 @@ export const preloadNextMusic = (src: string) => {
 
   console.log(`Preloading next music to audio${currentAudioId === 'A' ? 'B' : 'A'}`)
 
-  // 🎯 关键修复：确保预加载时不会自动播放
+  // 关键修复确保预加载时不会自动播放
   nextAudio.autoplay = false
   nextAudio.src = src
   nextAudio.load()  // 强制开始加载
@@ -611,12 +611,12 @@ export const switchToNextAudio = (): boolean => {
     console.log(`🔊 Switched AudioContext connection to audio${nextAudioId}`)
   }
 
-  // 🎯 关键修复：立即完全停止当前audio，避免两个音轨同时播放
+  // 关键修复立即完全停止当前audio，避免两个音轨同时播放
   const currentAudio = audio
   if (currentAudio) {
     currentAudio.pause()
     currentAudio.currentTime = 0  // 重置播放位置
-    currentAudio.autoplay = false // 🎯 重置autoplay，防止下次预加载时自动播放
+    currentAudio.autoplay = false // 重置autoplay，防止下次预加载时自动播放
     currentAudio.src = ''          // 立即清空src（不延迟）
     currentAudio.removeAttribute('src')
     console.log(`🧹 Immediately stopped and cleaned up audio${currentAudioId}`)
@@ -644,7 +644,7 @@ export const clearNextAudio = () => {
   const nextAudio = getNextAudio()
   if (nextAudio && nextAudio.src) {
     nextAudio.pause()
-    nextAudio.autoplay = false  // 🎯 重置autoplay
+    nextAudio.autoplay = false  // 重置autoplay
     nextAudio.src = ''
     nextAudio.removeAttribute('src')
     console.log(`Cleared next audio${currentAudioId === 'A' ? 'B' : 'A'}`)
@@ -729,7 +729,7 @@ export const getDuration = () => {
 type Noop = () => void
 
 // 双Audio事件监听 - 同时监听两个audio元素
-// 🎯 优化：传递audioId参数，让回调函数能识别是哪个audio触发的事件
+// 优化传递audioId参数，让回调函数能识别是哪个audio触发的事件
 type AudioEventCallback = (audioId?: 'A' | 'B') => void
 
 export const onPlaying = (callback: AudioEventCallback) => {

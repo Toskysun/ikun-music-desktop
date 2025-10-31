@@ -71,6 +71,7 @@ const handleKeyDown = (event: LX.KeyEvent) => {
       break
     case ' ':
       keys.push('space')
+      event.preventDefault() // 阻止空格键的默认页面滚动行为
       break
     default:
       keys.push(

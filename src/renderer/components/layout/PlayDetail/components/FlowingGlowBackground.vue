@@ -17,7 +17,7 @@ const checkWebGLSupport = (): {
   webgl2: boolean
   diagnostics?: string
 } => {
-  // 🔧 CRITICAL FIX: Use separate canvases for each context type
+  // CRITICAL FIX Use separate canvases for each context type
   // A canvas can only have ONE rendering context - once getContext() is called,
   // you cannot get a different context type on the same canvas!
 
@@ -267,7 +267,7 @@ export default {
     )
 
     onMounted(() => {
-      // 🔧 FIX: Delay initialization to ensure GPU process is fully ready
+      // FIX Delay initialization to ensure GPU process is fully ready
       // Electron's GPU context may not be available immediately on component mount
       console.log('[FlowingGlowBackground] Component mounted, delaying WebGL initialization...')
 

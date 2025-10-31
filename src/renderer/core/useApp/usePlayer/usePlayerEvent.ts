@@ -14,7 +14,7 @@ import {
 } from '@renderer/plugins/player'
 
 export default () => {
-  // 🎯 修复：只响应当前活跃audio的事件，忽略预加载audio的事件
+  // 修复只响应当前活跃audio的事件，忽略预加载audio的事件
   const rOnPlaying = onPlaying((audioId) => {
     const currentId = getCurrentAudioId()
     if (audioId !== currentId) {

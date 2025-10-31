@@ -56,7 +56,7 @@ export default () => {
       const position = state.position ?? getCurrentTime()
       const playbackRate = state.playbackRate ?? getPlaybackRate()
 
-      // 🎯 修复：验证参数有效性，避免 MediaSession API 错误
+      // 修复验证参数有效性，避免 MediaSession API 错误
       // 确保 duration 是有效的正数
       if (!duration || !isFinite(duration) || duration <= 0) {
         console.log('⚠️ Invalid duration, skipping position state update')

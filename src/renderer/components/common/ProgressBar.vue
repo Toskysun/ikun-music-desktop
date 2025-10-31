@@ -75,6 +75,9 @@ export default {
       if (progress > 1) progress = 1
       else if (progress < 0) progress = 0
       dragProgress.value = progress
+
+      // Emit progress dragging event for real-time lyric update
+      window.app_event.emit('progressDragging', progress * playProgress.maxPlayTime)
     }
 
     document.addEventListener('mousemove', handleMsMove)

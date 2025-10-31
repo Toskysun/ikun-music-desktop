@@ -259,6 +259,26 @@ export const addTempPlayList = (list: LX.Player.TempPlayListItem[]) => {
       bottomList.map(({ musicInfo, listId }) => ({ musicInfo, listId, isTempPlay: true }))
     )
 
+  // 修复 当添加稍后播放时，立即预加载第一首稍后播放歌曲
+  // 这样自动切歌时可以无缝切换到正确的歌曲
+  if (tempPlayList.length > 0 && playMusicInfo.musicInfo) {
+    const nextMusic = tempPlayList[0]
+    // 异步预加载第一首稍后播放歌曲
+    void (async () => {
+      const { getMusicUrl } = await import('@renderer/core/music')
+      const { preloadNextMusic } = await import('@renderer/plugins/player')
+      try {
+        const url = await getMusicUrl({ musicInfo: nextMusic.musicInfo, isRefresh: true })
+        if (url) {
+          preloadNextMusic(url)
+          console.log('🎵 Preloaded tempPlayList[0] to next audio')
+        }
+      } catch (err) {
+        console.error('Failed to preload tempPlayList music:', err)
+      }
+    })()
+  }
+
   if (!playMusicInfo.musicInfo) void playNext()
 }
 /**
