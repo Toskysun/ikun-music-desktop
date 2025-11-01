@@ -6,6 +6,10 @@ Project versioning adheres to [Semantic Versioning](http://semver.org/).
 Commit convention is based on [Conventional Commits](http://conventionalcommits.org).
 Change log format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.3.0-fix.2](https://github.com/ikunshare/ikun-music-desktop/compare/v2.10.0...v3.3.0-fix.2) - 2025-11-01
+
+修复QQ音乐搜索
+
 ## [2.10.0](https://github.com/lyswhut/lx-music-desktop/compare/v2.9.0...v2.10.0) - 2025-01-27
 
 落雪祝大家新年快乐！
