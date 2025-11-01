@@ -11,9 +11,15 @@ const handleApplyPlaybackRate = debounce(setPlaybackRate, 300)
 
 const handleSetProgress = () => {
   // Sync lyric to current playback position when progress changes
-  play()
-  // If music is paused, pause lyric immediately after seeking
-  if (!isPlay.value) {
+  // Update lyric position first (convert seconds to milliseconds)
+  playAtTime(getPlayerCurrentTime() * 1000)
+
+  // Then set playback state based on music player state
+  if (isPlay.value) {
+    // Resume lyric playback if music is playing
+    play()
+  } else {
+    // Keep lyric paused if music is paused
     pause()
   }
 }
