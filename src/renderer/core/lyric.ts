@@ -216,6 +216,13 @@ export const play = () => {
   sendDesktopLyricInfo({ action: 'set_play', data: currentTime })
 }
 
+export const playAtTime = (time: number) => {
+  // Play lyric at specific time (in milliseconds)
+  // Used for real-time lyric sync during progress bar dragging
+  lrc.play(time)
+  sendDesktopLyricInfo({ action: 'set_play', data: time })
+}
+
 export const pause = () => {
   lrc.pause()
   sendDesktopLyricInfo({ action: 'set_pause' })

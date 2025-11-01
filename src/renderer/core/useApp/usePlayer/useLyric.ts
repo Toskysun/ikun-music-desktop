@@ -2,7 +2,7 @@ import { onBeforeUnmount, watch } from '@common/utils/vueTools'
 import { debounce, throttle } from '@common/utils/common'
 // import { setDesktopLyricInfo, onGetDesktopLyricInfo } from '@renderer/utils/ipc'
 // import { musicInfo } from '@renderer/store/player/state'
-import { pause, play, setLyric, stop, init, sendInfo, setPlaybackRate } from '@renderer/core/lyric'
+import { pause, play, playAtTime, setLyric, stop, init, sendInfo, setPlaybackRate } from '@renderer/core/lyric'
 import { appSetting } from '@renderer/store/setting'
 import { getCurrentTime as getPlayerCurrentTime } from '@renderer/plugins/player'
 import { isPlay } from '@renderer/store/player/state'
@@ -19,9 +19,10 @@ const handleSetProgress = () => {
 }
 
 // Throttle progress dragging updates to avoid performance issues
-const handleProgressDragging = throttle(() => {
+const handleProgressDragging = throttle((time: number) => {
   // Real-time lyric sync during progress bar dragging
-  play()
+  // Convert time from seconds to milliseconds for lyric player
+  playAtTime(time * 1000)
   // Keep lyric paused if music is paused
   if (!isPlay.value) {
     pause()
