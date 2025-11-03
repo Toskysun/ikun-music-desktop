@@ -13,6 +13,15 @@ let mediaSourceA: MediaElementAudioSourceNode | null = null
 let mediaSourceB: MediaElementAudioSourceNode | null = null
 let mediaSource: MediaElementAudioSourceNode  // 指向当前活跃的mediaSource
 let crossfadeTimer: NodeJS.Timeout | null = null  // 交叉淡入淡出定时器
+let hasTriggeredNearEnd: boolean = false  // 标记是否已触发即将结束事件（避免重复）
+let nearEndCallback: (() => void) | null = null  // 即将结束的回调
+
+/**
+ * 检查是否正在进行交叉淡入淡出
+ */
+export const isCrossfading = (): boolean => {
+  return crossfadeTimer !== null
+}
 let analyser: AnalyserNode
 // https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext
 // https://benzleung.gitbooks.io/web-audio-api-mini-guide/content/chapter5-1.html
@@ -213,6 +222,33 @@ export const createAudio = () => {
   // 默认使用 audioA
   audio = audioA
   currentAudioId = 'A'
+
+  // CRITICAL FIX V5: 添加 timeupdate 监听器，提前触发切换
+  // 在音频即将结束前 1 秒触发回调，实现真正的重叠播放
+  const handleTimeupdateA = () => {
+    if (currentAudioId === 'A' && audioA && !hasTriggeredNearEnd && nearEndCallback) {
+      const remaining = audioA.duration - audioA.currentTime
+      if (remaining > 0 && remaining <= 1) {
+        console.log(`⏰ AudioA near end (${remaining.toFixed(2)}s remaining), triggering early crossfade`)
+        hasTriggeredNearEnd = true
+        nearEndCallback()
+      }
+    }
+  }
+
+  const handleTimeupdateB = () => {
+    if (currentAudioId === 'B' && audioB && !hasTriggeredNearEnd && nearEndCallback) {
+      const remaining = audioB.duration - audioB.currentTime
+      if (remaining > 0 && remaining <= 1) {
+        console.log(`⏰ AudioB near end (${remaining.toFixed(2)}s remaining), triggering early crossfade`)
+        hasTriggeredNearEnd = true
+        nearEndCallback()
+      }
+    }
+  }
+
+  audioA.addEventListener('timeupdate', handleTimeupdateA)
+  audioB.addEventListener('timeupdate', handleTimeupdateB)
 }
 
 const initAnalyser = () => {
@@ -273,9 +309,13 @@ const initAdvancedAudioFeatures = () => {
   mediaSourceA = audioContext.createMediaElementSource(audioA)
   mediaSourceB = audioContext.createMediaElementSource(audioB)
 
-  // 默认连接 mediaSourceA
+  // CRITICAL FIX: 同时连接两个 mediaSource 到 analyser
+  // 这样切换时不需要重新连接，避免音频流中断触发 onWaiting
+  mediaSourceA.connect(analyser)
+  mediaSourceB.connect(analyser)
+
+  // 默认使用 mediaSourceA（通过 audio 引用控制，两个 source 都已连接）
   mediaSource = mediaSourceA
-  mediaSource.connect(analyser)
 
   analyser.connect(biquads.get(`hz${freqs[0]}`)!)
   const lastBiquadFilter = biquads.get(`hz${freqs.at(-1)!}`)!
@@ -296,8 +336,15 @@ const initAdvancedAudioFeatures = () => {
 }
 
 const handleMediaListChange = () => {
-  mediaSource.disconnect()
-  mediaSource.connect(analyser)
+  // CRITICAL FIX: 重新连接两个 mediaSource（设备改变时）
+  if (mediaSourceA) {
+    mediaSourceA.disconnect()
+    mediaSourceA.connect(analyser)
+  }
+  if (mediaSourceB) {
+    mediaSourceB.disconnect()
+    mediaSourceB.connect(analyser)
+  }
 }
 
 // let isConnected = true
@@ -651,16 +698,20 @@ export const preloadNextMusic = (src: string): Promise<void> => {
 
       if (playPromise) {
         playPromise.then(() => {
-          // 播放成功后立即暂停
+          console.log(`✅ Audio${nextAudioId} playing silently (readyState=${nextAudio.readyState})`)
+
+          // CRITICAL FIX V2: 播放短暂时间后立即暂停并重置到 0
+          // 目的：强制浏览器解码，但保持 currentTime = 0，避免切换时 seeking
           setTimeout(() => {
-            nextAudio.pause()
-            nextAudio.currentTime = 0  // 重置到开头
-            nextAudio.muted = false  // 恢复音量控制
-            console.log(`⏸️ Paused audio${nextAudioId} after forcing load`)
-          }, 50)  // 播放 50ms 后暂停
+            if (nextAudio.src) {
+              nextAudio.pause()
+              nextAudio.currentTime = 0  // seeking 在暂停状态下完成，不影响切换
+              nextAudio.muted = false
+              console.log(`🎯 Audio${nextAudioId} preloaded and ready at currentTime=0 (paused, readyState=${nextAudio.readyState})`)
+            }
+          }, 200)  // 播放 200ms 足以让浏览器解码并缓存数据
         }).catch(err => {
           console.warn(`⚠️ Brief play failed (expected in some browsers):`, err)
-          // 播放失败也没关系，load() 应该已经触发了
           nextAudio.muted = false
         })
       }
@@ -692,20 +743,13 @@ export const switchToNextAudio = (): boolean => {
   const targetVolume = previousAudio?.volume ?? 1
   const wasMuted = previousAudio?.muted ?? false
 
+  // CRITICAL FIX: 两个 mediaSource 已在初始化时连接到 analyser
+  // 切换时只需更新 mediaSource 引用，无需 connect/disconnect
   let previousMediaSource: MediaElementAudioSourceNode | null = null
   if (audioContext && mediaSourceA && mediaSourceB) {
     previousMediaSource = mediaSource
-    const nextMediaSource = currentAudioId === 'A' ? mediaSourceB : mediaSourceA
-
-    if (nextMediaSource && mediaSource !== nextMediaSource) {
-      try {
-        nextMediaSource.connect(analyser)
-      } catch (err) {
-        console.warn('Failed to connect next media source', err)
-      }
-      mediaSource = nextMediaSource
-      console.log(`🔊 Prepared AudioContext connection for audio${nextAudioId}`)
-    }
+    mediaSource = currentAudioId === 'A' ? mediaSourceB : mediaSourceA
+    console.log(`🔊 Switched AudioContext to media source ${nextAudioId}`)
   }
 
   // 继承其他音频属性
@@ -726,78 +770,95 @@ export const switchToNextAudio = (): boolean => {
 
   console.log(`✅ Switched to audio${currentAudioId}, starting crossfade`)
 
-  // 启动下一个audio（从静音开始）
+  // CRITICAL FIX V5: nextAudio 应该是暂停状态（paused, currentTime=0, readyState>=3）
+  console.log(`   Next audio status: paused=${nextAudio.paused}, currentTime=${nextAudio.currentTime.toFixed(3)}s, readyState=${nextAudio.readyState}`)
+
+  // 验证预加载状态：currentTime 应该已经是 0
+  if (nextAudio.currentTime > 0.05) {
+    console.warn(`⚠️ Next audio currentTime not at 0 (${nextAudio.currentTime.toFixed(3)}s), resetting...`)
+    nextAudio.currentTime = 0
+  }
+
+  // CRITICAL FIX V5: 先让 nextAudio 开始静音播放，避免 play() 启动延迟
+  // 这样 crossfade 只调整音量，不会触发 onWaiting
+  nextAudio.volume = 0
+  nextAudio.muted = false
+
+  // 启动交叉淡入淡出的函数
+  const startCrossfade = () => {
+    console.log(`▶️ Starting crossfade for audio${nextAudioId}`)
+
+    // CRITICAL FIX: 延长交叉淡入淡出以覆盖可能的 onWaiting 缓冲
+    const fadeDuration = 500  // 延长到 500ms 覆盖缓冲延迟
+    const fadeSteps = 25      // 增加到 25 步更平滑
+    const fadeInterval = fadeDuration / fadeSteps
+
+    // 清理可能存在的旧定时器
+    if (crossfadeTimer) {
+      clearInterval(crossfadeTimer)
+      crossfadeTimer = null
+    }
+
+    let step = 0
+    crossfadeTimer = setInterval(() => {
+      step++
+      const progress = step / fadeSteps
+
+      // 使用 ease-in-out 曲线代替线性淡入淡出
+      const easedProgress = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2
+
+      // 下一个audio淡入（0 → targetVolume）
+      if (nextAudio) {
+        nextAudio.volume = easedProgress * targetVolume
+      }
+
+      // 当前audio淡出（targetVolume → 0）
+      if (previousAudio && !previousAudio.paused) {
+        previousAudio.volume = (1 - easedProgress) * targetVolume
+      }
+
+      if (step >= fadeSteps) {
+        clearInterval(crossfadeTimer!)
+        crossfadeTimer = null  // 清空引用
+
+        // 确保最终音量精确并恢复muted状态
+        if (nextAudio) {
+          nextAudio.volume = targetVolume
+          nextAudio.muted = wasMuted
+        }
+
+        // 淡入淡出完成后，清理旧audio
+        if (previousAudio) {
+          previousAudio.pause()
+          previousAudio.autoplay = false
+          try {
+            previousAudio.currentTime = 0
+          } catch {}
+          previousAudio.src = ''
+          previousAudio.removeAttribute('src')
+          previousAudio.volume = targetVolume  // 恢复音量为下次使用
+          previousAudio.muted = false
+
+          // Note: previousMediaSource 保持连接状态（初始化时已连接）
+          // 不需要 disconnect，两个 mediaSource 始终连接到 analyser
+          console.log(`🧹 Cleaned up audio${previousAudioId} after crossfade`)
+        }
+
+        console.log(`✅ Crossfade completed: audio${previousAudioId} → audio${nextAudioId}`)
+      }
+    }, fadeInterval)
+  }
+
+  // CRITICAL FIX V2: nextAudio 应该是暂停状态，先播放再开始 crossfade
+  // 这样避免了 seeking 操作（currentTime 已经是 0）
+  console.log(`▶️ Starting playback of audio${nextAudioId} from paused state`)
   const playPromise = nextAudio.play()
   if (playPromise && typeof playPromise.catch === 'function') {
     void playPromise.then(() => {
-      console.log(`▶️ Next audio${nextAudioId} started playing from silence`)
-
-      // CRITICAL FIX: 实现交叉淡入淡出（300ms，20步，使用ease-in-out曲线）
-      const fadeDuration = 300  // 淡入淡出总时长（毫秒）- 改为300ms覆盖缓冲延迟
-      const fadeSteps = 20      // 淡入淡出步数 - 改为20步更平滑
-      const fadeInterval = fadeDuration / fadeSteps
-
-      // 清理可能存在的旧定时器
-      if (crossfadeTimer) {
-        clearInterval(crossfadeTimer)
-        crossfadeTimer = null
-      }
-
-      let step = 0
-      crossfadeTimer = setInterval(() => {
-        step++
-        const progress = step / fadeSteps
-
-        // 使用 ease-in-out 曲线代替线性淡入淡出
-        const easedProgress = progress < 0.5
-          ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2
-
-        // 下一个audio淡入（0 → targetVolume）
-        if (nextAudio) {
-          nextAudio.volume = easedProgress * targetVolume
-        }
-
-        // 当前audio淡出（targetVolume → 0）
-        if (previousAudio && !previousAudio.paused) {
-          previousAudio.volume = (1 - easedProgress) * targetVolume
-        }
-
-        if (step >= fadeSteps) {
-          clearInterval(crossfadeTimer!)
-          crossfadeTimer = null  // 清空引用
-
-          // 确保最终音量精确并恢复muted状态
-          if (nextAudio) {
-            nextAudio.volume = targetVolume
-            nextAudio.muted = wasMuted
-          }
-
-          // 淡入淡出完成后，清理旧audio
-          if (previousAudio) {
-            previousAudio.pause()
-            previousAudio.autoplay = false
-            try {
-              previousAudio.currentTime = 0
-            } catch {}
-            previousAudio.src = ''
-            previousAudio.removeAttribute('src')
-            previousAudio.volume = targetVolume  // 恢复音量为下次使用
-            previousAudio.muted = false
-
-            if (previousMediaSource) {
-              try {
-                previousMediaSource.disconnect()
-              } catch (err) {
-                console.warn('Failed to disconnect previous media source', err)
-              }
-            }
-            console.log(`🧹 Cleaned up audio${previousAudioId} after crossfade`)
-          }
-
-          console.log(`✅ Crossfade completed: audio${previousAudioId} → audio${nextAudioId}`)
-        }
-      }, fadeInterval)
+      console.log(`✅ Audio${nextAudioId} started playing, beginning crossfade`)
+      startCrossfade()
     }).catch(err => {
       console.error('❌ Failed to start next audio for crossfade:', err)
       // 播放失败时恢复音量
@@ -806,6 +867,9 @@ export const switchToNextAudio = (): boolean => {
         nextAudio.muted = wasMuted
       }
     })
+  } else {
+    // 同步 play()（理论上不应该发生）
+    startCrossfade()
   }
 
   return true
@@ -828,7 +892,21 @@ export const clearNextAudio = () => {
 // ============================================
 
 export const setResource = (src: string) => {
-  if (audio) audio.src = src
+  if (audio) {
+    audio.src = src
+    // 重置即将结束的标志（新歌曲开始）
+    hasTriggeredNearEnd = false
+  }
+}
+
+/**
+ * 注册即将结束的回调（在音频剩余 1 秒时触发）
+ */
+export const onNearEnd = (callback: () => void) => {
+  nearEndCallback = callback
+  return () => {
+    nearEndCallback = null
+  }
 }
 
 export const setPlay = () => {

@@ -102,16 +102,19 @@ export default () => {
   window.app_event.on('setProgress', setProgress)
   window.app_event.on('musicToggled', handleSetPlayInfo)
 
-  const rOnTimeupdate = onTimeupdate(() => {
-    const time = getCurrentTime()
-    const duration = playProgress.maxPlayTime
-    if (duration > 10 && duration - time < 10 && !preloadMusicInfo.info) {
-      void preloadNextMusicUrl(time)
-    }
-  })
+  // DISABLED: Legacy preload system conflicts with new dual-audio system
+  // The new system in action.ts preloads immediately after URL is set
+  // Keeping this would cause duplicate preloads and readyState resets
+  // const rOnTimeupdate = onTimeupdate(() => {
+  //   const time = getCurrentTime()
+  //   const duration = playProgress.maxPlayTime
+  //   if (duration > 10 && duration - time < 10 && !preloadMusicInfo.info) {
+  //     void preloadNextMusicUrl(time)
+  //   }
+  // })
 
   onBeforeUnmount(() => {
-    rOnTimeupdate()
+    // rOnTimeupdate()
     window.app_event.off('setProgress', setProgress)
     window.app_event.off('musicToggled', handleSetPlayInfo)
   })

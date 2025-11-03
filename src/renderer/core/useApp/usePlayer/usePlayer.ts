@@ -2,7 +2,7 @@ import { onBeforeUnmount, watch } from '@common/utils/vueTools'
 import { useI18n } from '@renderer/plugins/i18n'
 import { setTitle } from '@renderer/utils'
 
-import { getCurrentTime, getDuration, setPause, setStop } from '@renderer/plugins/player'
+import { getCurrentTime, getDuration, setPause, setStop, onNearEnd } from '@renderer/plugins/player'
 
 import useMediaSessionInfo from './useMediaSessionInfo'
 import usePlayProgress from './usePlayProgress'
@@ -84,18 +84,27 @@ export default () => {
       setPause()
     }
   }
+
+  // CRITICAL FIX V5: 提前触发切换（在音频即将结束前 1 秒）
+  const handleNearEnd = () => {
+    if (window.lx.isPlayedStop) {
+      console.log('played stop - ignoring near end')
+      return
+    }
+    console.log('🎵 Near end detected, triggering early playNext for seamless transition')
+    void playNext(true)
+  }
+
   const handleEnded = () => {
-    // setTimeout(() => {
+    // CRITICAL FIX V5: onEnded 时不再触发 playNext，因为 handleNearEnd 已经处理了
+    // 这里只设置状态
     if (window.lx.isPlayedStop) {
       setAllStatus(t('player__end'))
       console.log('played stop')
       return
     }
-    // resetPlayerMusicInfo()
-    // window.app_event.stop()
     setAllStatus(t('player__end'))
-    void playNext(true)
-    // })
+    console.log('🎵 Audio ended (crossfade should have already started)')
   }
 
   const setProgress = (time: number) => {
@@ -158,6 +167,9 @@ export default () => {
 
   window.app_event.on('playerEnded', handleEnded)
 
+  // CRITICAL FIX V5: 注册提前切换回调
+  const removeNearEndListener = onNearEnd(handleNearEnd)
+
   onBeforeUnmount(() => {
     window.key_event.off(HOTKEY_PLAYER.next.action, handlePlayNext)
 
@@ -181,5 +193,8 @@ export default () => {
     window.app_event.off('playerCanplay', handleCanplay)
 
     window.app_event.off('playerEnded', handleEnded)
+
+    // CRITICAL FIX V5: 清理提前切换监听器
+    removeNearEndListener()
   })
 }

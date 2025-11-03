@@ -11,6 +11,7 @@ import {
   onWaiting,
   getErrorCode,
   getCurrentAudioId,
+  isCrossfading,
 } from '@renderer/plugins/player'
 
 export default () => {
@@ -99,6 +100,15 @@ export default () => {
       console.log(`[IGNORED] onWaiting from audio${audioId} (current: audio${currentId})`)
       return
     }
+
+    // CRITICAL FIX: 在 crossfade 期间忽略 pause() 调用
+    // 因为 previousAudio 可能还在播放淡出
+    if (isCrossfading()) {
+      console.log(`[ACTIVE] onWaiting from audio${audioId} (during crossfade - skipping pause)`)
+      window.app_event.playerWaiting()
+      return
+    }
+
     console.log(`[ACTIVE] onWaiting from audio${audioId}`)
     window.app_event.pause()
     window.app_event.playerWaiting()
