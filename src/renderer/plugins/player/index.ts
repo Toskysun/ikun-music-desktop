@@ -12,6 +12,7 @@ let audioContext: AudioContext
 let mediaSourceA: MediaElementAudioSourceNode | null = null
 let mediaSourceB: MediaElementAudioSourceNode | null = null
 let mediaSource: MediaElementAudioSourceNode  // 指向当前活跃的mediaSource
+let crossfadeTimer: NodeJS.Timeout | null = null  // 交叉淡入淡出定时器
 let analyser: AnalyserNode
 // https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext
 // https://benzleung.gitbooks.io/web-audio-api-mini-guide/content/chapter5-1.html
@@ -564,23 +565,111 @@ export const getCurrentAudioId = (): 'A' | 'B' => {
 }
 
 /**
- * 预加载下一首歌曲到备用audio
+ * 预加载下一首歌曲的URL (双Audio无缝切换核心)
  * @param src 音频URL
+ * @returns Promise<void> 当音频准备好播放时 resolve
  */
-export const preloadNextMusic = (src: string) => {
+export const preloadNextMusic = (src: string): Promise<void> => {
   const nextAudio = getNextAudio()
-  if (!nextAudio) return
+  if (!nextAudio) return Promise.resolve()
 
-  console.log(`Preloading next music to audio${currentAudioId === 'A' ? 'B' : 'A'}`)
+  const nextAudioId = currentAudioId === 'A' ? 'B' : 'A'
+  console.log(`Preloading next music to audio${nextAudioId}`)
 
-  // 关键修复确保预加载时不会自动播放
+  // 关键修复：确保预加载时不会自动播放
   nextAudio.autoplay = false
+  nextAudio.preload = 'auto'  // 强制预加载策略
   nextAudio.src = src
-  nextAudio.load()  // 强制开始加载
+
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup()
+      console.warn(`⚠️ Preload timeout after 10s (readyState=${nextAudio.readyState})`)
+      // 超时也 resolve，但会在切换时可能仍有延迟
+      resolve()
+    }, 10000)  // 延长到 10 秒
+
+    let hasResolved = false
+
+    const cleanup = () => {
+      if (hasResolved) return
+      hasResolved = true
+      clearTimeout(timeout)
+      nextAudio.removeEventListener('canplay', onCanPlay)
+      nextAudio.removeEventListener('error', onError)
+      nextAudio.removeEventListener('loadeddata', onLoadedData)
+    }
+
+    // 关键修复：监听 canplay 事件（不是轮询 readyState）
+    const onCanPlay = () => {
+      console.log(`✅ Audio ${nextAudioId} canplay (readyState=${nextAudio.readyState})`)
+
+      // 再次确认 readyState >= 3
+      if (nextAudio.readyState >= 3) {
+        cleanup()
+        resolve()
+      } else {
+        console.log(`⚠️ canplay but readyState=${nextAudio.readyState}, waiting...`)
+      }
+    }
+
+    // 作为备选，监听 loadeddata 事件
+    const onLoadedData = () => {
+      console.log(`📦 Audio ${nextAudioId} loadeddata (readyState=${nextAudio.readyState})`)
+      if (nextAudio.readyState >= 2) {  // HAVE_CURRENT_DATA 以上
+        // 延迟一点再检查，确保解码完成
+        setTimeout(() => {
+          if (nextAudio.readyState >= 3) {
+            cleanup()
+            resolve()
+          }
+        }, 100)
+      }
+    }
+
+    const onError = (e: Event) => {
+      cleanup()
+      console.error(`❌ Preload error for audio${nextAudioId}:`, e)
+      reject(new Error('Preload failed'))
+    }
+
+    nextAudio.addEventListener('canplay', onCanPlay, { once: false })
+    nextAudio.addEventListener('loadeddata', onLoadedData, { once: false })
+    nextAudio.addEventListener('error', onError, { once: true })
+
+    // 关键修复：强制触发加载（短暂静音播放）
+    nextAudio.volume = 0  // 静音
+    nextAudio.muted = true  // 双保险静音
+
+    // 先 load()
+    nextAudio.load()
+
+    // 延迟 100ms 后短暂播放，强制浏览器开始解码
+    setTimeout(() => {
+      console.log(`🔊 Forcing audio${nextAudioId} to load by brief silent play...`)
+      const playPromise = nextAudio.play()
+
+      if (playPromise) {
+        playPromise.then(() => {
+          // 播放成功后立即暂停
+          setTimeout(() => {
+            nextAudio.pause()
+            nextAudio.currentTime = 0  // 重置到开头
+            nextAudio.muted = false  // 恢复音量控制
+            console.log(`⏸️ Paused audio${nextAudioId} after forcing load`)
+          }, 50)  // 播放 50ms 后暂停
+        }).catch(err => {
+          console.warn(`⚠️ Brief play failed (expected in some browsers):`, err)
+          // 播放失败也没关系，load() 应该已经触发了
+          nextAudio.muted = false
+        })
+      }
+    }, 100)
+  })
 }
 
 /**
- * 切换到下一个audio (无缝切换核心函数)
+ * 切换到下一个audio (无缝切换核心函数 - 使用交叉淡入淡出)
  * @returns 是否切换成功
  */
 export const switchToNextAudio = (): boolean => {
@@ -596,43 +685,128 @@ export const switchToNextAudio = (): boolean => {
     return false
   }
 
-  // 如果AudioContext已初始化,切换mediaSource连接
+  const previousAudio = audio
+  const previousAudioId = currentAudioId
+
+  // 保存当前音量设置（用于淡入淡出）
+  const targetVolume = previousAudio?.volume ?? 1
+  const wasMuted = previousAudio?.muted ?? false
+
+  let previousMediaSource: MediaElementAudioSourceNode | null = null
   if (audioContext && mediaSourceA && mediaSourceB) {
-    const currentMediaSource = mediaSource
+    previousMediaSource = mediaSource
     const nextMediaSource = currentAudioId === 'A' ? mediaSourceB : mediaSourceA
 
-    // 断开当前mediaSource
-    currentMediaSource.disconnect()
-
-    // 连接下一个mediaSource
-    nextMediaSource.connect(analyser)
-    mediaSource = nextMediaSource
-
-    console.log(`🔊 Switched AudioContext connection to audio${nextAudioId}`)
+    if (nextMediaSource && mediaSource !== nextMediaSource) {
+      try {
+        nextMediaSource.connect(analyser)
+      } catch (err) {
+        console.warn('Failed to connect next media source', err)
+      }
+      mediaSource = nextMediaSource
+      console.log(`🔊 Prepared AudioContext connection for audio${nextAudioId}`)
+    }
   }
 
-  // 关键修复立即完全停止当前audio，避免两个音轨同时播放
-  const currentAudio = audio
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio.currentTime = 0  // 重置播放位置
-    currentAudio.autoplay = false // 重置autoplay，防止下次预加载时自动播放
-    currentAudio.src = ''          // 立即清空src（不延迟）
-    currentAudio.removeAttribute('src')
-    console.log(`🧹 Immediately stopped and cleaned up audio${currentAudioId}`)
+  // 继承其他音频属性
+  if (previousAudio) {
+    nextAudio.playbackRate = previousAudio.playbackRate
+    nextAudio.defaultPlaybackRate = previousAudio.defaultPlaybackRate
+    nextAudio.preservesPitch = previousAudio.preservesPitch
   }
 
-  // 切换到下一个audio
-  audio = nextAudio
-  currentAudioId = currentAudioId === 'A' ? 'B' : 'A'
-
-  console.log(`✅ Switched to audio${currentAudioId}, starting playback`)
-
-  // 立即播放下一个audio
+  // CRITICAL FIX: 下一个audio从静音开始播放
+  nextAudio.volume = 0
+  nextAudio.muted = false  // 不使用mute，而是用volume=0实现静音
   nextAudio.autoplay = true
-  void nextAudio.play().catch(err => {
-    console.error('❌ Failed to auto-play next audio:', err)
-  })
+
+  // 切换audio引用（在播放前切换）
+  audio = nextAudio
+  currentAudioId = nextAudioId
+
+  console.log(`✅ Switched to audio${currentAudioId}, starting crossfade`)
+
+  // 启动下一个audio（从静音开始）
+  const playPromise = nextAudio.play()
+  if (playPromise && typeof playPromise.catch === 'function') {
+    void playPromise.then(() => {
+      console.log(`▶️ Next audio${nextAudioId} started playing from silence`)
+
+      // CRITICAL FIX: 实现交叉淡入淡出（300ms，20步，使用ease-in-out曲线）
+      const fadeDuration = 300  // 淡入淡出总时长（毫秒）- 改为300ms覆盖缓冲延迟
+      const fadeSteps = 20      // 淡入淡出步数 - 改为20步更平滑
+      const fadeInterval = fadeDuration / fadeSteps
+
+      // 清理可能存在的旧定时器
+      if (crossfadeTimer) {
+        clearInterval(crossfadeTimer)
+        crossfadeTimer = null
+      }
+
+      let step = 0
+      crossfadeTimer = setInterval(() => {
+        step++
+        const progress = step / fadeSteps
+
+        // 使用 ease-in-out 曲线代替线性淡入淡出
+        const easedProgress = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2
+
+        // 下一个audio淡入（0 → targetVolume）
+        if (nextAudio) {
+          nextAudio.volume = easedProgress * targetVolume
+        }
+
+        // 当前audio淡出（targetVolume → 0）
+        if (previousAudio && !previousAudio.paused) {
+          previousAudio.volume = (1 - easedProgress) * targetVolume
+        }
+
+        if (step >= fadeSteps) {
+          clearInterval(crossfadeTimer!)
+          crossfadeTimer = null  // 清空引用
+
+          // 确保最终音量精确并恢复muted状态
+          if (nextAudio) {
+            nextAudio.volume = targetVolume
+            nextAudio.muted = wasMuted
+          }
+
+          // 淡入淡出完成后，清理旧audio
+          if (previousAudio) {
+            previousAudio.pause()
+            previousAudio.autoplay = false
+            try {
+              previousAudio.currentTime = 0
+            } catch {}
+            previousAudio.src = ''
+            previousAudio.removeAttribute('src')
+            previousAudio.volume = targetVolume  // 恢复音量为下次使用
+            previousAudio.muted = false
+
+            if (previousMediaSource) {
+              try {
+                previousMediaSource.disconnect()
+              } catch (err) {
+                console.warn('Failed to disconnect previous media source', err)
+              }
+            }
+            console.log(`🧹 Cleaned up audio${previousAudioId} after crossfade`)
+          }
+
+          console.log(`✅ Crossfade completed: audio${previousAudioId} → audio${nextAudioId}`)
+        }
+      }, fadeInterval)
+    }).catch(err => {
+      console.error('❌ Failed to start next audio for crossfade:', err)
+      // 播放失败时恢复音量
+      if (nextAudio) {
+        nextAudio.volume = targetVolume
+        nextAudio.muted = wasMuted
+      }
+    })
+  }
 
   return true
 }

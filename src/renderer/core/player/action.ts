@@ -245,8 +245,10 @@ const preloadNextMusicUrl = async () => {
       return
     }
 
-    // 预加载到下一个audio元素
-    preloadNextMusic(url)
+    // 预加载到下一个audio元素（等待音频完全解码）
+    await preloadNextMusic(url).catch(err => {
+      console.error('❌ Preload failed:', err)
+    })
     console.log(`✅ Next music preloaded successfully to backup audio`)
   } catch (err) {
     console.error('❌ Failed to preload next music:', err)
