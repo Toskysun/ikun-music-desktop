@@ -71,7 +71,10 @@ const handleKeyDown = (event: LX.KeyEvent) => {
       break
     case ' ':
       keys.push('space')
-      event.preventDefault() // 阻止空格键的默认页面滚动行为
+      // 只有在非编辑元素中才阻止默认行为（防止页面滚动）
+      if (event.target && !assertStopCallback(event.target as HTMLElement)) {
+        event.preventDefault()
+      }
       break
     default:
       keys.push(
@@ -91,8 +94,10 @@ const handleKeyDown = (event: LX.KeyEvent) => {
 }
 
 const handleKeyUp = (event: LX.KeyEvent) => {
-  // if (assertStopCallback(event.target)) return
-  event.preventDefault()
+  // 在可编辑元素中允许默认行为
+  if (!event.target || !assertStopCallback(event.target as HTMLElement)) {
+    event.preventDefault()
+  }
   let keys = eventModifiers(event)
   switch (event.key) {
     case 'Control':
