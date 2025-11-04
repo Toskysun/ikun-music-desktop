@@ -736,6 +736,10 @@ export const switchToNextAudio = (): boolean => {
     return false
   }
 
+  // CRITICAL FIX V5: 重置 near end 标志，允许新歌曲触发提前切换
+  hasTriggeredNearEnd = false
+  console.log(`🔄 Reset hasTriggeredNearEnd for audio${nextAudioId}`)
+
   const previousAudio = audio
   const previousAudioId = currentAudioId
 
