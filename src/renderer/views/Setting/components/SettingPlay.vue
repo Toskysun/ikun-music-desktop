@@ -19,6 +19,22 @@ dd
   .gap-top
     base-checkbox(id="setting_player_auto_skip_on_error" :model-value="appSetting['player.autoSkipOnError']" :label="$t('setting__play_auto_skip_on_error')" @update:model-value="updateSetting({'player.autoSkipOnError': $event})")
   .gap-top
+    div(:style="{ display: 'flex', flexDirection: 'column', gap: '8px' }")
+      div(:style="{ display: 'flex', alignItems: 'center', gap: '8px' }")
+        span {{ $t('setting__play_seek_step') }}
+        svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_seek_step_tip')")
+      div(:style="{ display: 'flex', alignItems: 'center', gap: '8px' }")
+        base-slider-bar(:style="{ flex: 'auto', minWidth: '150px' }" :value="appSetting['player.seekStep']" :min="1" :max="10" @change="handleSeekStepChange")
+        span(:style="{ flex: 'none', width: '60px', fontSize: '12px', textAlign: 'center' }") {{ appSetting['player.seekStep'].toFixed(2) }}s
+  .gap-top
+    div(:style="{ display: 'flex', flexDirection: 'column', gap: '8px' }")
+      div(:style="{ display: 'flex', alignItems: 'center', gap: '8px' }")
+        span {{ $t('setting__play_gapless_preload_time') }}
+        svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_gapless_preload_time_tip')")
+      div(:style="{ display: 'flex', alignItems: 'center', gap: '8px' }")
+        base-slider-bar(:style="{ flex: 'auto', minWidth: '150px' }" :value="appSetting['player.gaplessPreloadTime'] - 1000" :min="0" :max="1000" @change="handleGaplessPreloadTimeChange")
+        span(:style="{ flex: 'none', width: '60px', fontSize: '12px', textAlign: 'center' }") {{ appSetting['player.gaplessPreloadTime'] - 1000 }}ms
+  .gap-top
     base-checkbox(id="setting_player_lyric_s2t" :model-value="appSetting['player.isS2t']" :label="$t('setting__play_lyric_s2t')" @update:model-value="updateSetting({ 'player.isS2t': $event })")
   .gap-top
     base-checkbox(id="setting_player_lyric_play_lxlrc" :model-value="appSetting['player.isPlayLxlrc']" :label="$t('setting__play_lyric_lxlrc')" @update:model-value="updateSetting({ 'player.isPlayLxlrc': $event })")
@@ -139,6 +155,16 @@ export default {
       updateSetting({ 'player.isMaxOutputChannelCount': enabled })
     }
 
+    const handleGaplessPreloadTimeChange = (value) => {
+      const roundedValue = Math.round(value / 10) * 10  // Round to nearest 10ms
+      const actualValue = roundedValue + 1000  // Convert display value (0-1000) to actual value (1000-2000)
+      updateSetting({ 'player.gaplessPreloadTime': actualValue })
+    }
+
+    const handleSeekStepChange = (value) => {
+      updateSetting({ 'player.seekStep': value })
+    }
+
     return {
       appSetting,
       updateSetting,
@@ -148,6 +174,8 @@ export default {
       handleUpdatePowerSaveBlocker,
       isMaxOutputChannelCount,
       handleUpdateMaxOutputChannelCount,
+      handleGaplessPreloadTimeChange,
+      handleSeekStepChange,
       playQualityList,
       isMac,
     }

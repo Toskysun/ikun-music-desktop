@@ -51,7 +51,7 @@ function startRenderer() {
 
     const server = new WebpackDevServer(
       {
-        port: 9080,
+        port: 9090,
         hot: true,
         historyApiFallback: true,
         static: {
@@ -106,7 +106,7 @@ function startRendererLyric() {
 
     const server = new WebpackDevServer(
       {
-        port: 9081,
+        port: 9091,
         hot: true,
         historyApiFallback: true,
         // static: {

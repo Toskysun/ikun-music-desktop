@@ -18,6 +18,16 @@ const local: LX.HotKeyConfig = {
       name: HOTKEY_PLAYER.next.name,
       action: HOTKEY_PLAYER.next.action,
     },
+    arrowleft: {
+      type: HOTKEY_PLAYER.seekbackward.type,
+      name: HOTKEY_PLAYER.seekbackward.name,
+      action: HOTKEY_PLAYER.seekbackward.action,
+    },
+    arrowright: {
+      type: HOTKEY_PLAYER.seekforward.type,
+      name: HOTKEY_PLAYER.seekforward.name,
+      action: HOTKEY_PLAYER.seekforward.action,
+    },
     f1: {
       type: HOTKEY_COMMON.focusSearchInput.type,
       name: HOTKEY_COMMON.focusSearchInput.name,

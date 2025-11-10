@@ -298,6 +298,16 @@ declare global {
       'player.isAutoCleanPlayedList': boolean
 
       /**
+       * 无缝播放提前切换时间（毫秒，1000-2000ms，步进10ms）
+       */
+      'player.gaplessPreloadTime': number
+
+      /**
+       * 快进/后退步长（秒，1-10s）
+       */
+      'player.seekStep': number
+
+      /**
        * 播放详情页-是否缩放当前播放的歌词行
        */
       'playDetail.isZoomActiveLrc': boolean

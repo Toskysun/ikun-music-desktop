@@ -15,6 +15,7 @@ let mediaSource: MediaElementAudioSourceNode  // 指向当前活跃的mediaSourc
 let crossfadeTimer: NodeJS.Timeout | null = null  // 交叉淡入淡出定时器
 let hasTriggeredNearEnd: boolean = false  // 标记是否已触发即将结束事件（避免重复）
 let nearEndCallback: (() => void) | null = null  // 即将结束的回调
+let gaplessPreloadTime: number = 1000  // 无缝播放提前切换时间（毫秒），默认1000ms
 
 /**
  * 检查是否正在进行交叉淡入淡出
@@ -224,11 +225,12 @@ export const createAudio = () => {
   currentAudioId = 'A'
 
   // CRITICAL FIX V5: 添加 timeupdate 监听器，提前触发切换
-  // 在音频即将结束前 1 秒触发回调，实现真正的重叠播放
+  // 在音频即将结束前触发回调，实现真正的重叠播放（时间可配置）
   const handleTimeupdateA = () => {
     if (currentAudioId === 'A' && audioA && !hasTriggeredNearEnd && nearEndCallback) {
       const remaining = audioA.duration - audioA.currentTime
-      if (remaining > 0 && remaining <= 1) {
+      const threshold = gaplessPreloadTime / 1000  // Convert ms to seconds
+      if (remaining > 0 && remaining <= threshold) {
         console.log(`⏰ AudioA near end (${remaining.toFixed(2)}s remaining), triggering early crossfade`)
         hasTriggeredNearEnd = true
         nearEndCallback()
@@ -239,7 +241,8 @@ export const createAudio = () => {
   const handleTimeupdateB = () => {
     if (currentAudioId === 'B' && audioB && !hasTriggeredNearEnd && nearEndCallback) {
       const remaining = audioB.duration - audioB.currentTime
-      if (remaining > 0 && remaining <= 1) {
+      const threshold = gaplessPreloadTime / 1000  // Convert ms to seconds
+      if (remaining > 0 && remaining <= threshold) {
         console.log(`⏰ AudioB near end (${remaining.toFixed(2)}s remaining), triggering early crossfade`)
         hasTriggeredNearEnd = true
         nearEndCallback()
@@ -904,13 +907,21 @@ export const setResource = (src: string) => {
 }
 
 /**
- * 注册即将结束的回调（在音频剩余 1 秒时触发）
+ * 注册即将结束的回调（在音频剩余指定时间时触发，时间可配置）
  */
 export const onNearEnd = (callback: () => void) => {
   nearEndCallback = callback
   return () => {
     nearEndCallback = null
   }
+}
+
+/**
+ * 设置无缝播放提前切换时间
+ * @param time 提前切换时间（毫秒），范围 1000-2000ms
+ */
+export const setGaplessPreloadTime = (time: number) => {
+  gaplessPreloadTime = time
 }
 
 export const setPlay = () => {

@@ -5,6 +5,7 @@
       :aria-label="
         isMute ? $t('player__volume_muted') : `${$t('player__volume')}${parseInt(volume * 100)}%`
       "
+      @click="handleToggleMute"
       @wheel="handleWheel"
     >
       <svg
@@ -48,6 +49,11 @@ import { computed } from '@common/utils/vueTools'
 // import { musicInfo, playMusicInfo } from '@renderer/store/player/state'
 import { saveVolumeIsMute } from '@renderer/store/setting'
 import { volume, isMute } from '@renderer/store/player/volume'
+
+// Toggle mute state on button click
+const handleToggleMute = () => {
+  saveVolumeIsMute(!isMute.value)
+}
 
 const handleWheel = (event) => {
   window.app_event.setVolume(Math.round(volume.value * 100 + (-event.deltaY / 100) * 2) / 100)

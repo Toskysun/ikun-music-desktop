@@ -152,7 +152,7 @@ export const createWindow = () => {
 
   const winURL =
     process.env.NODE_ENV !== 'production'
-      ? 'http://localhost:9081/lyric.html'
+      ? 'http://localhost:9091/lyric.html'
       : `file://${path.join(encodePath(__dirname), 'lyric.html')}`
   void browserWindow.loadURL(
     winURL +

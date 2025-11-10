@@ -37,6 +37,8 @@ import useSoundEffect from './useSoundEffect'
 import useMaxOutputChannelCount from './useMaxOutputChannelCount'
 import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import usePreloadNextMusic from './usePreloadNextMusic'
+import useGaplessPreloadTime from './useGaplessPreloadTime'
+import useSmoothSeek from './useSmoothSeek'
 
 export default () => {
   const t = useI18n()
@@ -49,8 +51,10 @@ export default () => {
   useMaxOutputChannelCount()
   useSoundEffect()
   usePlaybackRate()
+  useGaplessPreloadTime()
   useWatchList()
   usePreloadNextMusic()
+  useSmoothSeek()
 
   const handlePlayNext = () => {
     void playNext()
@@ -110,15 +114,17 @@ export default () => {
   const setProgress = (time: number) => {
     window.app_event.setProgress(time)
   }
+  // Note: Seek forward/backward is now handled by useSmoothSeek
+  // which supports both short press (configurable step from settings) and long press (smooth seeking)
   const handleSeekforward = () => {
-    const seekOffset = 5
+    const seekOffset = appSetting['player.seekStep'] || 3
     const curTime = getCurrentTime()
     const time = Math.min(getCurrentTime() + seekOffset, getDuration())
     if (Math.trunc(curTime) == Math.trunc(time)) return
     setProgress(time)
   }
   const handleSeekbackward = () => {
-    const seekOffset = 5
+    const seekOffset = appSetting['player.seekStep'] || 3
     const curTime = getCurrentTime()
     const time = Math.max(getCurrentTime() - seekOffset, 0)
     if (Math.trunc(curTime) == Math.trunc(time)) return
@@ -151,8 +157,10 @@ export default () => {
   window.key_event.on(HOTKEY_PLAYER.music_love.action, collectMusic)
   window.key_event.on(HOTKEY_PLAYER.music_unlove.action, uncollectMusic)
   window.key_event.on(HOTKEY_PLAYER.music_dislike.action, dislikeMusic)
-  window.key_event.on(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward)
-  window.key_event.on(HOTKEY_PLAYER.seekforward.action, handleSeekforward)
+  // Note: seekforward/seekbackward handlers are now registered in useSmoothSeek
+  // to support long press smooth seeking
+  // window.key_event.on(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward)
+  // window.key_event.on(HOTKEY_PLAYER.seekforward.action, handleSeekforward)
   // 空格键暂停/播放
   window.key_event.on('key_space_down', togglePlay)
 
@@ -178,8 +186,9 @@ export default () => {
     window.key_event.off(HOTKEY_PLAYER.music_love.action, collectMusic)
     window.key_event.off(HOTKEY_PLAYER.music_unlove.action, uncollectMusic)
     window.key_event.off(HOTKEY_PLAYER.music_dislike.action, dislikeMusic)
-    window.key_event.off(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward)
-    window.key_event.off(HOTKEY_PLAYER.seekforward.action, handleSeekforward)
+    // Note: seekforward/seekbackward cleanup is now handled in useSmoothSeek
+    // window.key_event.off(HOTKEY_PLAYER.seekbackward.action, handleSeekbackward)
+    // window.key_event.off(HOTKEY_PLAYER.seekforward.action, handleSeekforward)
     // 移除空格键监听
     window.key_event.off('key_space_down', togglePlay)
 
