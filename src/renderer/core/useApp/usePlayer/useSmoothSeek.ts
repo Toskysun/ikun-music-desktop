@@ -6,102 +6,140 @@ import { isPlay } from '@renderer/store/player/state'
 // Long press detection threshold (milliseconds)
 const LONG_PRESS_THRESHOLD = 300
 
-// Smooth seek interval speed (milliseconds) - reduced for smoother experience
-const SMOOTH_SEEK_INTERVAL = 100
-
-// Seek increment per step (seconds) - now configurable from settings
+// Seek increment per step (seconds) - configurable from settings
 const getSeekStep = () => appSetting['player.seekStep'] || 3
 
-// Smooth seek step - larger increment for better performance
-const SMOOTH_SEEK_STEP = 1.0
+// Acceleration curve parameters
+const MIN_SPEED = 0.2  // Initial speed (seconds per update)
+const MAX_SPEED = 2.0  // Maximum speed (seconds per update)
+const ACCELERATION_DURATION = 2000  // Time to reach max speed (milliseconds)
+const UPDATE_INTERVAL = 50  // Minimum interval between updates (milliseconds)
+
+// Calculate seek speed based on elapsed time using smooth acceleration curve
+const getSeekSpeed = (elapsedTime: number): number => {
+  // Use quadratic function for smooth acceleration
+  const progress = Math.min(elapsedTime / ACCELERATION_DURATION, 1)
+  return MIN_SPEED + (MAX_SPEED - MIN_SPEED) * progress * progress
+}
 
 // Long press state management
 interface LongPressState {
   isLongPressing: boolean
   timer: NodeJS.Timeout | null
-  intervalTimer: NodeJS.Timeout | null
+  animationFrameId: number | null
   direction: 'forward' | 'backward' | null
   startTime: number
   wasPlaying: boolean  // Track if audio was playing before long press
+  lastUpdateTime: number  // Track last update timestamp for throttling
+  longPressStartTime: number  // Track when long press actually started
 }
 
 export default () => {
   const longPressState = ref<LongPressState>({
     isLongPressing: false,
     timer: null,
-    intervalTimer: null,
+    animationFrameId: null,
     direction: null,
     startTime: 0,
     wasPlaying: false,
+    lastUpdateTime: 0,
+    longPressStartTime: 0,
   })
 
-  // Perform smooth seek
-  const performSeek = (direction: 'forward' | 'backward') => {
+  // Perform smooth seek with acceleration
+  const performSeek = (currentTime: number) => {
+    const state = longPressState.value
+    if (!state.isLongPressing || !state.direction) return
+
+    // Calculate elapsed time since long press started
+    const elapsedTime = currentTime - state.longPressStartTime
+
+    // Calculate time since last update
+    const timeSinceLastUpdate = currentTime - state.lastUpdateTime
+
+    // Throttle updates to minimum interval
+    if (timeSinceLastUpdate < UPDATE_INTERVAL) {
+      state.animationFrameId = requestAnimationFrame(performSeek)
+      return
+    }
+
+    // Update last update timestamp
+    state.lastUpdateTime = currentTime
+
+    // Calculate seek speed based on elapsed time
+    const seekSpeed = getSeekSpeed(elapsedTime)
+
+    // Get current audio position
     const curTime = getCurrentTime()
     const duration = getDuration()
 
+    // Calculate new time with acceleration
     let newTime: number
-    if (direction === 'forward') {
-      newTime = Math.min(curTime + SMOOTH_SEEK_STEP, duration)
+    if (state.direction === 'forward') {
+      newTime = Math.min(curTime + seekSpeed, duration)
     } else {
-      newTime = Math.max(curTime - SMOOTH_SEEK_STEP, 0)
+      newTime = Math.max(curTime - seekSpeed, 0)
     }
 
     // Only update if there's a meaningful change
     if (Math.abs(newTime - curTime) >= 0.01) {
       window.app_event.setProgress(newTime)
     }
+
+    // Continue animation loop
+    state.animationFrameId = requestAnimationFrame(performSeek)
   }
 
-  // Start smooth seeking
+  // Start smooth seeking with requestAnimationFrame
   const startSmoothSeek = (direction: 'forward' | 'backward') => {
     if (longPressState.value.isLongPressing) return
 
-    longPressState.value.isLongPressing = true
-    longPressState.value.direction = direction
+    const state = longPressState.value
+    state.isLongPressing = true
+    state.direction = direction
+    state.longPressStartTime = performance.now()
+    state.lastUpdateTime = state.longPressStartTime
 
     // Remember if audio was playing
-    longPressState.value.wasPlaying = isPlay.value
+    state.wasPlaying = isPlay.value
 
     // Pause audio during long press seek to prevent audio glitches
-    if (longPressState.value.wasPlaying) {
+    if (state.wasPlaying) {
       setPause()
     }
 
-    console.log(`Starting smooth ${direction} seek (paused: ${longPressState.value.wasPlaying})`)
+    console.log(`Starting smooth ${direction} seek (paused: ${state.wasPlaying})`)
 
-    // Immediately perform first seek
-    performSeek(direction)
-
-    // Start interval for continuous seeking
-    longPressState.value.intervalTimer = setInterval(() => {
-      performSeek(direction)
-    }, SMOOTH_SEEK_INTERVAL)
+    // Start animation loop with requestAnimationFrame
+    state.animationFrameId = requestAnimationFrame(performSeek)
   }
 
   // Stop smooth seeking
   const stopSmoothSeek = () => {
-    if (!longPressState.value.isLongPressing) return
+    const state = longPressState.value
+    if (!state.isLongPressing) return
 
     console.log('Stopping smooth seek')
 
-    // Clear interval timer
-    if (longPressState.value.intervalTimer) {
-      clearInterval(longPressState.value.intervalTimer)
-      longPressState.value.intervalTimer = null
+    // Cancel animation frame
+    if (state.animationFrameId !== null) {
+      cancelAnimationFrame(state.animationFrameId)
+      state.animationFrameId = null
     }
 
     // Resume playback if it was playing before
-    if (longPressState.value.wasPlaying) {
+    if (state.wasPlaying) {
       setTimeout(() => {
         setPlay()
       }, 50)  // Small delay to ensure seek operation completes
     }
 
     // Reset state
-    longPressState.value.isLongPressing = false
-    longPressState.value.direction = null
-    longPressState.value.wasPlaying = false
+    state.isLongPressing = false
+    state.direction = null
+    state.wasPlaying = false
+    state.lastUpdateTime = 0
+    state.longPressStartTime = 0
   }
 
   // Check if user is currently editing (input/textarea focused)
