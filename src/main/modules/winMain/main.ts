@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, session } from 'electron'
 import path from 'node:path'
 import { createTaskBarButtons, getWindowSizeInfo } from './utils'
 import { getPlatform, isLinux, isWin } from '@common/utils'
-import { getProxy, openDevTools as handleOpenDevTools } from '@main/utils'
+import { getProxy, openDevTools as handleOpenDevTools, updateSetting } from '@main/utils'
 import { mainSend } from '@common/mainIpc'
 import { sendFocus, sendTaskbarButtonClick, sendMaximizeStateChange } from './rendererEvent'
 import { encodePath } from '@common/utils/electron'
@@ -65,11 +65,28 @@ const winEvent = () => {
   browserWindow.on('unmaximize', () => {
     sendMaximizeStateChange(false)
   })
+
+  // Save window size when user manually resizes the window
+  browserWindow.on('resized', () => {
+    if (!browserWindow || browserWindow.isMaximized() || browserWindow.isMinimized() || browserWindow.isFullScreen()) return
+    const bounds = browserWindow.getBounds()
+    updateSetting({
+      'common.windowWidth': bounds.width,
+      'common.windowHeight': bounds.height,
+    })
+  })
 }
 
 export const createWindow = () => {
   closeWindow()
+
+  // Use custom window size if saved, otherwise use preset size
+  const customWidth = global.lx.appSetting['common.windowWidth']
+  const customHeight = global.lx.appSetting['common.windowHeight']
   const windowSizeInfo = getWindowSizeInfo(global.lx.appSetting['common.windowSizeId'])
+
+  const width = customWidth ?? windowSizeInfo.width
+  const height = customHeight ?? windowSizeInfo.height
 
   const { shouldUseDarkColors, theme } = global.lx.theme
   const ses = session.fromPartition('persist:win-main')
@@ -80,9 +97,9 @@ export const createWindow = () => {
    * Initial window options
    */
   const options: Electron.BrowserWindowConstructorOptions = {
-    height: windowSizeInfo.height,
+    height: height,
     useContentSize: true,
-    width: windowSizeInfo.width,
+    width: width,
     minWidth: 750,
     minHeight: 550,
     frame: false,

@@ -13,7 +13,17 @@ declare global {
       'common.windowSizeId': number
 
       /**
-       * 窗口大小id
+       * 自定义窗口宽度（用户手动调整后保存）
+       */
+      'common.windowWidth': number | null
+
+      /**
+       * 自定义窗口高度（用户手动调整后保存）
+       */
+      'common.windowHeight': number | null
+
+      /**
+       * 字体大小
        */
       'common.fontSize': number
 
