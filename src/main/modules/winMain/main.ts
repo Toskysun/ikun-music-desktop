@@ -4,7 +4,7 @@ import { createTaskBarButtons, getWindowSizeInfo } from './utils'
 import { getPlatform, isLinux, isWin } from '@common/utils'
 import { getProxy, openDevTools as handleOpenDevTools } from '@main/utils'
 import { mainSend } from '@common/mainIpc'
-import { sendFocus, sendTaskbarButtonClick } from './rendererEvent'
+import { sendFocus, sendTaskbarButtonClick, sendMaximizeStateChange } from './rendererEvent'
 import { encodePath } from '@common/utils/electron'
 
 let browserWindow: Electron.BrowserWindow | null = null
@@ -58,6 +58,13 @@ const winEvent = () => {
   browserWindow.on('hide', () => {
     global.lx.event_app.main_window_hide()
   })
+  
+  browserWindow.on('maximize', () => {
+    sendMaximizeStateChange(true)
+  })
+  browserWindow.on('unmaximize', () => {
+    sendMaximizeStateChange(false)
+  })
 }
 
 export const createWindow = () => {
@@ -76,13 +83,15 @@ export const createWindow = () => {
     height: windowSizeInfo.height,
     useContentSize: true,
     width: windowSizeInfo.width,
+    minWidth: 750,
+    minHeight: 550,
     frame: false,
     transparent: !global.envParams.cmdParams.dt,
     hasShadow: global.envParams.cmdParams.dt,
     // enableRemoteModule: false,
     // icon: join(global.__static, isWin ? 'icons/256x256.ico' : 'icons/512x512.png'),
-    resizable: false,
-    maximizable: false,
+    resizable: !!global.envParams.cmdParams.dt,
+    maximizable: !!global.envParams.cmdParams.dt,
     fullscreenable: true,
     roundedCorners: global.envParams.cmdParams.dt,
     show: false,
@@ -98,6 +107,7 @@ export const createWindow = () => {
       spellcheck: false, // 禁用拼写检查器
     },
   }
+
   if (global.envParams.cmdParams.dt)
     options.backgroundColor = theme.colors['--color-primary-light-1000']
   if (global.lx.appSetting['common.startInFullscreen']) {
@@ -179,6 +189,10 @@ export const maximize = () => {
 export const unmaximize = () => {
   if (!browserWindow) return
   browserWindow.unmaximize()
+}
+export const isWindowMaximized = (): boolean => {
+  if (!browserWindow) return false
+  return browserWindow.isMaximized()
 }
 export const toggleHide = () => {
   if (!browserWindow) return

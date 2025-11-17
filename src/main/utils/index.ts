@@ -12,14 +12,15 @@ import themes from '@common/theme/index.json'
 export const parseEnvParams = (argv = process.argv): { cmdParams: LX.CmdParams, deeplink: string | null } => {
   const cmdParams: LX.CmdParams = {}
   let deeplink = null
-  const rx = /^-\w+/
+  const rx = /^--?\w+/  // Support both -dt and --dt
   for (let param of argv) {
     if (URL_SCHEME_RXP.test(param)) {
       deeplink = param
     }
 
     if (!rx.test(param)) continue
-    param = param.substring(1)
+    // Remove leading dashes (- or --)
+    param = param.replace(/^--?/, '')
     let index = param.indexOf('=')
     if (index < 0) {
       cmdParams[param] = true
@@ -27,6 +28,12 @@ export const parseEnvParams = (argv = process.argv): { cmdParams: LX.CmdParams, 
       cmdParams[param.substring(0, index)] = param.substring(index + 1)
     }
   }
+
+  // Default to non-transparent mode (--dt) if not specified
+  if (cmdParams.dt === undefined) {
+    cmdParams.dt = true
+  }
+
   return {
     cmdParams,
     deeplink,

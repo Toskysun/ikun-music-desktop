@@ -186,6 +186,7 @@ function startElectron() {
     '--inspect=5858',
     // 'NODE_ENV=development',
     path.join(__dirname, '../dist/main.js'),
+    '--dt',  // Default to non-transparent mode
   ]
 
   // detect yarn or npm and process commandline args accordingly

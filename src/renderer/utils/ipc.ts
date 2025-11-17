@@ -828,6 +828,20 @@ export const maxWindow = () => {
 }
 
 /**
+ * 取消最大化窗口
+ */
+export const unmaxWindow = () => {
+  rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.unmax)
+}
+
+/**
+ * 切换最大化状态
+ */
+export const toggleMaxWindow = () => {
+  rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.toggle_max)
+}
+
+/**
  * 最小化、最大化窗口切换
  */
 export const minMaxWindowToggle = () => {
@@ -861,6 +875,20 @@ export const onFocus = (listener: LX.IpcRendererEventListener): RemoveListener =
   rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.focus, listener)
   return () => {
     rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.focus, listener)
+  }
+}
+
+/**
+ * 窗口最大化状态变化事件
+ * @param listener
+ * @returns
+ */
+export const onMaximizeStateChange = (
+  listener: LX.IpcRendererEventListenerParams<boolean>
+): RemoveListener => {
+  rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.on_maximize_state_change, listener)
+  return () => {
+    rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.on_maximize_state_change, listener)
   }
 }
 
