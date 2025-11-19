@@ -19,6 +19,8 @@ import {
   QUALITY_ORDER as _QUALITY_ORDER,
   getFallbackQualities as _getFallbackQualities,
 } from '@common/utils/downloadQuality'
+import { checkPath, removeFile } from '@common/utils/nodejs'
+import { dialog } from '@renderer/plugins/Dialog'
 
 // 从共享模块重新导出，避免循环依赖
 // 原函数已移至 @common/utils/downloadQuality.ts
@@ -454,6 +456,84 @@ const filterTask = (list: LX.Download.ListItem[]) => {
     return true
   })
 }
+
+/**
+ * 处理已存在的下载任务
+ * 检查文件状态并询问用户是否重新下载
+ * @param task 已存在的下载任务
+ * @returns Promise<boolean> - 是否需要重新下载（删除旧任务）
+ */
+const handleExistingTask = async (task: LX.Download.ListItem): Promise<boolean> => {
+  console.log(`[handleExistingTask] Checking task ${task.id}`)
+  console.log(`[handleExistingTask] Task status: ${task.status}, isComplate: ${task.isComplate}`)
+
+  // 如果任务正在运行，不允许重新下载
+  if (task.status === DOWNLOAD_STATUS.RUN || task.status === DOWNLOAD_STATUS.WAITING) {
+    console.log(`[handleExistingTask] Task ${task.id} is running/waiting, cannot re-download`)
+    return false
+  }
+
+  // 如果任务已完成，检查文件是否存在
+  if (task.isComplate) {
+    const savePath = buildSavePath(task)
+    const filePath = task.metadata.filePath || joinPath(savePath, task.metadata.fileName)
+
+    // 检查文件是否存在
+    const fileExists = await checkPath(filePath)
+
+    // 如果文件不存在，自动重新下载（不需要询问用户）
+    if (!fileExists) {
+      console.log(`[handleExistingTask] File missing for task ${task.id}, will auto re-download`)
+      return true
+    }
+
+    // 文件存在，显示确认对话框询问用户
+    const i18n = window.i18n
+    const musicName = `${task.metadata.musicInfo.name} - ${task.metadata.musicInfo.singer}`
+    const message = i18n.t('download__file_exists_message')
+    const title = i18n.t('download__file_exists_title')
+
+    const shouldRedownload = await dialog.confirm({
+      message: `${title}\n\n${musicName}\n\n${message}`,
+      confirmButtonText: i18n.t('confirm_button_text'),
+      cancelButtonText: i18n.t('cancel_button_text_2')
+    })
+
+    if (!shouldRedownload) {
+      console.log(`[handleExistingTask] User cancelled re-download for task ${task.id}`)
+      return false
+    }
+
+    // 用户确认重新下载，删除旧文件
+    console.log(`[handleExistingTask] User confirmed re-download for task ${task.id}`)
+    try {
+      await removeFile(filePath)
+      console.log(`[handleExistingTask] Successfully deleted existing file: ${filePath}`)
+      return true
+    } catch (error) {
+      console.error(`[handleExistingTask] Failed to delete file ${filePath}:`, error)
+      void dialog({
+        message: i18n.t('download__file_delete_failed') || 'Failed to delete existing file. Please check file permissions.',
+        confirmButtonText: i18n.t('confirm_button_text')
+      })
+      return false
+    }
+  }
+
+  // 任务未完成（暂停、错误等状态），询问用户是否重新开始
+  const i18n = window.i18n
+  const musicName = `${task.metadata.musicInfo.name} - ${task.metadata.musicInfo.singer}`
+
+  const shouldRedownload = await dialog.confirm({
+    message: `${musicName}\n\n${i18n.t('download__task_exists_restart') || '该任务已存在但未完成，是否重新开始下载？'}`,
+    confirmButtonText: i18n.t('confirm_button_text'),
+    cancelButtonText: i18n.t('cancel_button_text_2')
+  })
+
+  console.log(`[handleExistingTask] User ${shouldRedownload ? 'confirmed' : 'cancelled'} restart for incomplete task ${task.id}`)
+  return shouldRedownload
+}
+
 /**
  * 创建下载任务
  * @param list 要下载的歌曲
@@ -468,6 +548,13 @@ export const createDownloadTasks = async (
   if (!list.length) {
     console.log('[action] No items in list, returning early')
     return
+  }
+
+  // CRITICAL: Ensure downloadList is loaded from database before checking for existing tasks
+  if (downloadList.length === 0) {
+    console.log('[action] downloadList is empty, loading from database...')
+    await getDownloadList()
+    console.log(`[action] Loaded ${downloadList.length} tasks from database`)
   }
   const fallbackStrategy = appSetting['download.qualityFallbackStrategy'] as 'downgrade' | 'upgrade' | 'max' | 'min'
   console.log('[action] Calling worker.download.createDownloadTasks with:', {
@@ -490,14 +577,85 @@ export const createDownloadTasks = async (
     )
     console.log('[action] Worker result:', workerResult)
 
-    const tasks = filterTask(workerResult)
-    console.log('[action] Tasks after filter:', tasks)
+    // Process tasks one by one to handle re-downloads properly
+    const tasksToAdd: LX.Download.ListItem[] = []
+    const processedIds = new Set<string>()
 
-    if (tasks.length) {
-      console.log('[action] Adding tasks...')
-      await addTasks(tasks)
-      console.log('[action] Tasks added successfully')
+    for (const task of workerResult) {
+      markRaw(task.metadata)
+
+      // Skip if we've already processed this ID in this batch
+      if (processedIds.has(task.id)) {
+        console.log(`Task ${task.id} already processed in this batch, skipping duplicate`)
+        continue
+      }
+      processedIds.add(task.id)
+
+      // Check if task exists NOW (not using cached set)
+      const existingTask = downloadList.find(item => item.id === task.id)
+
+      if (existingTask) {
+        // Task already exists - check if we should re-download
+        const shouldRedownload = await handleExistingTask(existingTask)
+        if (shouldRedownload) {
+          // Remove the old task immediately
+          console.log(`[RE-DOWNLOAD] Removing old task ${task.id}...`)
+          console.log(`[RE-DOWNLOAD] downloadList length before removal: ${downloadList.length}`)
+
+          await removeDownloadTasks([task.id])
+
+          console.log(`[RE-DOWNLOAD] downloadList length after removal: ${downloadList.length}`)
+
+          // CRITICAL: Wait for database operation to complete
+          // The removeDownloadTasks updates memory immediately but DB operation may be async
+          // Increased delay to 200ms to be safer
+          console.log(`[RE-DOWNLOAD] Waiting 200ms for DB sync...`)
+          await new Promise(resolve => setTimeout(resolve, 200))
+
+          console.log(`[RE-DOWNLOAD] Old task ${task.id} removed, will add new task`)
+
+          // Add to list for adding
+          tasksToAdd.push(task)
+        } else {
+          console.log(`Task ${task.id} skipped - user cancelled or already exists`)
+        }
+      } else {
+        // New task - add it
+        tasksToAdd.push(task)
+        console.log(`New task ${task.id} will be added`)
+      }
     }
+
+    console.log('[action] Total tasks to add:', tasksToAdd.length)
+
+    // Add all new tasks (including re-downloads)
+    if (tasksToAdd.length > 0) {
+      console.log('[action] Adding tasks...')
+      console.log('[action] Task IDs to add:', tasksToAdd.map(t => t.id))
+
+      // Final safety check: ensure none of these IDs exist in downloadList
+      // This should not happen but is a final safeguard
+      const currentIds = new Set(downloadList.map(item => item.id))
+      const safeTasks = tasksToAdd.filter(task => {
+        const exists = currentIds.has(task.id)
+        if (exists) {
+          console.error(`SAFETY CHECK FAILED: Task ${task.id} still exists in downloadList!`)
+        }
+        return !exists
+      })
+
+      if (safeTasks.length !== tasksToAdd.length) {
+        console.error(`Filtered out ${tasksToAdd.length - safeTasks.length} duplicate tasks`)
+      }
+
+      if (safeTasks.length > 0) {
+        await addTasks(safeTasks)
+        console.log('[action] Tasks added successfully')
+      } else {
+        console.log('[action] No tasks to add after safety check')
+      }
+    }
+
     console.log('[action] Checking start task...')
     void checkStartTask()
   } catch (error) {
