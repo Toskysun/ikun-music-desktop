@@ -1,11 +1,7 @@
 <template>
   <div :class="[$style.sliderContent, { [$style.disabled]: disabled }, className]">
     <div :class="[$style.slider]">
-      <div
-        ref="dom_sliderBar"
-        :class="$style.sliderBar"
-        :style="{ transform: `scaleX(${(value - min) / (max - min) || 0})` }"
-      />
+      <div ref="dom_sliderBar" :class="$style.sliderBar" :style="{ transform: `scaleX(${(value - min) / (max - min) || 0})` }" />
     </div>
     <div :class="$style.sliderMask" @mousedown="handleSliderMsDown" />
   </div>
@@ -33,6 +29,10 @@ export default {
       type: Number,
       required: true,
     },
+    step: {
+      type: Number,
+      default: 1,
+    },
     disabled: {
       type: Boolean,
       default: false,
@@ -43,37 +43,51 @@ export default {
     const sliderEvent = {
       isMsDown: false,
       msDownX: 0,
-      msDownValue: 0,
+      msDownRatio: 0,
     }
     const dom_sliderBar = ref(null)
 
-    const handleSliderMsDown = (event) => {
+    const clampValue = val => {
+      if (val < props.min) return props.min
+      if (val > props.max) return props.max
+      return val
+    }
+    const getSteppedValue = val => {
+      const step = props.step > 0 ? props.step : 1
+      const stepped = Math.round((val - props.min) / step) * step + props.min
+      return clampValue(Number(stepped.toFixed(10)))
+    }
+    const getSliderWidth = () => dom_sliderBar.value?.clientWidth || 0
+    const getRange = () => props.max - props.min
+    const emitSteppedValue = rawValue => {
+      const value = getSteppedValue(rawValue)
+      emit('change', value)
+      return value
+    }
+
+    const handleSliderMsDown = event => {
       if (props.disabled) return
+      const width = getSliderWidth()
+      if (!width) return
 
       sliderEvent.isMsDown = true
       sliderEvent.msDownX = event.clientX
 
-      sliderEvent.msDownValue = event.offsetX / dom_sliderBar.value.clientWidth
-      let val = sliderEvent.msDownValue * (props.max - props.min) + props.min
-      if (val < props.min) val = props.min
-      if (val > props.max) val = props.max
-      emit('change', val)
-
-      // if (isMute.value) window.app_event.setSliderIsMute(false)
+      const rawValue = (event.offsetX / width) * getRange() + props.min
+      const value = emitSteppedValue(rawValue)
+      sliderEvent.msDownRatio = getRange() === 0 ? 0 : (value - props.min) / getRange()
     }
     const handleSliderMsUp = () => {
       sliderEvent.isMsDown = false
     }
-    const handleSliderMsMove = (event) => {
+    const handleSliderMsMove = event => {
       if (!sliderEvent.isMsDown || props.disabled) return
-      let value =
-        (sliderEvent.msDownValue +
-          (event.clientX - sliderEvent.msDownX) / dom_sliderBar.value.clientWidth) *
-          (props.max - props.min) +
-        props.min
-      if (value > props.max) value = props.max
-      else if (value < props.min) value = props.min
-      emit('change', value)
+      const width = getSliderWidth()
+      if (!width) return
+
+      const ratio = sliderEvent.msDownRatio + (event.clientX - sliderEvent.msDownX) / width
+      const rawValue = ratio * getRange() + props.min
+      emitSteppedValue(rawValue)
     }
 
     document.addEventListener('mousemove', handleSliderMsMove)
@@ -102,13 +116,13 @@ export default {
   // margin-right: 10px;
   display: flex;
   align-items: center;
-  opacity: 0.5;
+  opacity: .5;
   transition: opacity @transition-normal;
   &:hover {
     opacity: 1;
   }
   &.disabled {
-    opacity: 0.3;
+    opacity: .3;
     .sliderMask {
       cursor: default;
     }
@@ -156,4 +170,5 @@ export default {
   height: 100%;
   cursor: pointer;
 }
+
 </style>
