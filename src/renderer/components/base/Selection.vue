@@ -140,7 +140,7 @@ export default {
   display: inline-block;
   font-size: 12px;
   position: relative;
-  width: 300px;
+  width: var(--selection-width, 300px);
 
   &.active {
     .label {
