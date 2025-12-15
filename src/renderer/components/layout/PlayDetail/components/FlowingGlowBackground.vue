@@ -307,18 +307,5 @@ export default {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-
-  // 添加深色遮罩层，降低背景亮度，提升前景文字和图标的可读性
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4); // 40% 不透明度的黑色遮罩
-    pointer-events: none;
-    z-index: 1; // 确保遮罩在 canvas 上方
-  }
 }
 </style>

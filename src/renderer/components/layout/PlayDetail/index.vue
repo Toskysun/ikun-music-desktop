@@ -1,13 +1,13 @@
 <template lang="pug">
 transition(enter-active-class="animated slideInRight" leave-active-class="animated slideOutDown" @after-enter="handleAfterEnter" @after-leave="handleAfterLeave")
-  div(v-if="isShowPlayerDetail" :class="[$style.container, { fullscreen: isFullscreen }]" @contextmenu="handleContextMenu")
+  div(v-if="isShowPlayerDetail" :class="[$style.container, { fullscreen: isFullscreen, [$style.flowingGlowMode]: appSetting['player.flowingGlowBackground'] && webglSupported }]" @contextmenu="handleContextMenu")
     //- 流光溢彩背景效果（可选）
     transition(enter-active-class="animated fadeIn" leave-active-class="animated fadeOut")
       flowing-glow-background(
         v-if="appSetting['player.flowingGlowBackground'] && visibled && musicInfo.pic"
         :album="musicInfo.pic"
         :fps="60"
-        :flow-speed="1"
+        :flow-speed="4"
         :render-scale="0.5"
         :has-lyric="true"
         @webgl-not-supported="handleWebGLNotSupported"
@@ -309,5 +309,97 @@ export default {
   opacity: 1;
   margin-left: 10px;
   transform: scaleX(0);
+}
+
+// 流光溢彩模式下的固定颜色样式
+.flowingGlowMode {
+  // 设置固定的白色文字
+  color: #fff;
+
+  // 歌曲信息文字
+  .description p {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  // 所有按钮和图标
+  :global {
+    // 控制按钮
+    button, .playBtn {
+      color: rgba(255, 255, 255, 0.9) !important;
+      svg {
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+    }
+
+    // 歌词文字 - 未播放行使用半透明白色
+    .font-lrc {
+      color: rgba(255, 255, 255, 0.6) !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    .line-content {
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+    // 当前播放行高亮 - 纯白色
+    .line-content.line-mode.active .font-lrc,
+    .line-content.font-mode.played .font-lrc {
+      color: #fff !important;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    // 逐字歌词渐变效果
+    .line-content.font-mode > .line > .font-lrc > span {
+      background-color: rgba(255, 255, 255, 0.6) !important;
+      background-image: -webkit-linear-gradient(
+        top,
+        #fff,
+        #fff
+      ) !important;
+    }
+
+    // 可选歌词内容
+    .lyricSelectContent {
+      color: rgba(255, 255, 255, 0.7) !important;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      .lrcActive {
+        color: #fff !important;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      }
+    }
+
+    // 时间标签
+    .timeLabel span {
+      color: #fff !important;
+    }
+
+    // 播放控制区域
+    .playControl {
+      color: #fff !important;
+    }
+
+    // 底部控制按钮
+    .footerLeftControlBtns button {
+      color: rgba(255, 255, 255, 0.8) !important;
+      &.active {
+        color: #fff !important;
+      }
+    }
+
+    // 跳转按钮
+    .skip {
+      .label {
+        color: rgba(255, 255, 255, 0.8) !important;
+      }
+      .line {
+        border-color: rgba(255, 255, 255, 0.4) !important;
+      }
+    }
+
+    // 窗口控制按钮
+    .control-btn {
+      color: rgba(255, 255, 255, 0.9) !important;
+      svg {
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+    }
+  }
 }
 </style>
