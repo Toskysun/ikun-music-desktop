@@ -2,13 +2,17 @@ interface HTMLAudioElementChrome extends HTMLAudioElement {
   setSinkId: (id: string) => Promise<void>
 }
 
+interface AudioContextChrome extends AudioContext {
+  setSinkId: (id: string) => Promise<void>
+}
+
 // 双Audio元素系统 - 用于无缝切换
 let audioA: HTMLAudioElementChrome | null = null
 let audioB: HTMLAudioElementChrome | null = null
 let currentAudioId: 'A' | 'B' = 'A'  // 当前播放的audio
 let audio: HTMLAudioElementChrome | null = null  // 指向当前活跃的audio
 
-let audioContext: AudioContext
+let audioContext: AudioContextChrome
 let mediaSourceA: MediaElementAudioSourceNode | null = null
 let mediaSourceB: MediaElementAudioSourceNode | null = null
 let mediaSource: MediaElementAudioSourceNode  // 指向当前活跃的mediaSource
@@ -298,7 +302,7 @@ const initGain = () => {
 const initAdvancedAudioFeatures = () => {
   if (audioContext) return
   if (!audio || !audioA || !audioB) throw new Error('audio not defined')
-  audioContext = new window.AudioContext({ latencyHint: 'playback' })
+  audioContext = new window.AudioContext({ latencyHint: 'playback' }) as AudioContextChrome
   defaultChannelCount = audioContext.destination.channelCount
 
   initAnalyser()
@@ -977,8 +981,19 @@ export const setCurrentTime = (time: number) => {
 }
 
 export const setMediaDeviceId = async (mediaDeviceId: string): Promise<void> => {
-  if (!audio) return
-  return audio.setSinkId(mediaDeviceId)
+  // Set output device for both audio elements (dual-audio system for gapless playback)
+  const promises: Promise<void>[] = []
+
+  if (audioA) promises.push(audioA.setSinkId(mediaDeviceId))
+  if (audioB) promises.push(audioB.setSinkId(mediaDeviceId))
+
+  // Fix: Also set AudioContext output device when sound effects are active
+  // AudioContext.setSinkId() is supported in Chrome 110+ (Electron 39+)
+  if (audioContext) {
+    promises.push(audioContext.setSinkId(mediaDeviceId))
+  }
+
+  await Promise.all(promises)
 }
 
 export const setVolume = (volume: number) => {

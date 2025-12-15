@@ -334,7 +334,6 @@ export default {
     // 歌词文字 - 未播放行使用半透明白色
     .font-lrc {
       color: rgba(255, 255, 255, 0.6) !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
     .line-content {
       color: rgba(255, 255, 255, 0.6) !important;
@@ -343,7 +342,6 @@ export default {
     .line-content.line-mode.active .font-lrc,
     .line-content.font-mode.played .font-lrc {
       color: #fff !important;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
     // 逐字歌词渐变效果
     .line-content.font-mode > .line > .font-lrc > span {
