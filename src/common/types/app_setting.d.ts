@@ -343,6 +343,26 @@ declare global {
       'playDetail.isDelayScroll': boolean
 
       /**
+       * 播放详情页-歌词滚动位置
+       */
+      'playDetail.lyricScrollPosition': 'top' | 'center'
+
+      /**
+       * 播放详情页-是否启用逐字歌词上移效果
+       */
+      'playDetail.lyricTextLiftEffect': boolean
+
+      /**
+       * 播放详情页-逐字歌词上移效果是否已通过彩蛋解锁
+       */
+      'playDetail.lyricTextLiftEffectUnlocked': boolean
+
+      /**
+       * 播放详情页-逐字歌词上移幅度 (1-20, 对应 0.01em - 0.20em)
+       */
+      'playDetail.lyricTextLiftEffectOffset': number
+
+      /**
        * 是否启用桌面歌词
        */
       'desktopLyric.enable': boolean

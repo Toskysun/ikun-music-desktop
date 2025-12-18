@@ -5,21 +5,55 @@ const fontSplitRxp = /(?=<\d+,\d+>).*?/g
 const timeRxpAll = /<(\d+),(\d+)>/g
 const timeRxp = /<(\d+),(\d+)>/
 
-// Create animation
-const createAnimation = (dom, duration, isVertical) =>
-  new window.Animation(
+// Default lift offset - '0' means no lift effect when setting is disabled
+const DEFAULT_LIFT_OFFSET = '0'
+
+// Get the lift offset from CSS variable (inherits from parent elements)
+const getLiftOffset = (dom) => {
+  if (dom && dom.isConnected) {
+    const cssValue = getComputedStyle(dom).getPropertyValue('--lyric-lift-offset').trim()
+    return cssValue || DEFAULT_LIFT_OFFSET
+  }
+  return DEFAULT_LIFT_OFFSET
+}
+
+const createAnimation = (dom, duration, isVertical, liftOffset = DEFAULT_LIFT_OFFSET) => {
+  return new window.Animation(
     new window.KeyframeEffect(
       dom,
       isVertical
-        ? [{ backgroundSize: '100% 0' }, { backgroundSize: '100% 100%' }]
-        : [{ backgroundSize: '0 100%' }, { backgroundSize: '100% 100%' }],
+        ? [
+            { backgroundSize: '100% 0', transform: 'translateY(0)' },
+            { backgroundSize: '100% 100%', transform: `translateY(${liftOffset})` },
+          ]
+        : [
+            { backgroundSize: '0 100%', transform: 'translateY(0)' },
+            { backgroundSize: '100% 100%', transform: `translateY(${liftOffset})` },
+          ],
       {
         duration,
         easing: 'linear',
+        fill: 'forwards',
       }
     ),
     document.timeline
   )
+}
+
+// Update animation keyframes with the current lift offset
+const updateAnimationKeyframes = (animation, dom, isVertical, containerDom) => {
+  const liftOffset = getLiftOffset(containerDom)
+  const keyframes = isVertical
+    ? [
+        { backgroundSize: '100% 0', transform: 'translateY(0)' },
+        { backgroundSize: '100% 100%', transform: `translateY(${liftOffset})` },
+      ]
+    : [
+        { backgroundSize: '0 100%', transform: 'translateY(0)' },
+        { backgroundSize: '100% 100%', transform: `translateY(${liftOffset})` },
+      ]
+  animation.effect.setKeyframes(keyframes)
+}
 
 // https://jsfiddle.net/ceqpnbky/
 // https://jsfiddle.net/ceqpnbky/1/
@@ -212,11 +246,15 @@ export default class FontPlayer {
   }
 
   _handlePlayFont(font, currentTime, toFinishe) {
+    // Update animation keyframes with current CSS variable value
+    updateAnimationKeyframes(font.animation, font.dom, this.isVertical, this.lineContent)
+    const liftOffset = getLiftOffset(this.lineContent)
     switch (font.animation.playState) {
       case 'finished':
         break
       case 'idle':
         font.dom.style.backgroundSize = '100% 100%'
+        font.dom.style.transform = `translateY(${liftOffset})`
         if (!toFinishe) font.animation.play()
         break
       default:
@@ -312,6 +350,7 @@ export default class FontPlayer {
       let font = this.fonts[i]
       font.animation.cancel()
       font.dom.style.backgroundSize = '0 100%'
+      font.dom.style.transform = 'translateY(0)'
     }
 
     this.curFontNum--
@@ -336,9 +375,13 @@ export default class FontPlayer {
     if (this.isLineMode) return this._handlePlayLine(true)
     this.lineContent.classList.add('played')
 
+    const liftOffset = getLiftOffset(this.lineContent)
     for (const font of this.fonts) {
+      // Update animation keyframes with current CSS variable value
+      updateAnimationKeyframes(font.animation, font.dom, this.isVertical, this.lineContent)
       font.animation.cancel()
       font.dom.style.backgroundSize = '100% 100%'
+      font.dom.style.transform = `translateY(${liftOffset})`
     }
     this.curFontNum = this.maxFontNum
   }
@@ -357,6 +400,7 @@ export default class FontPlayer {
     for (const font of this.fonts) {
       font.animation.cancel()
       font.dom.style.backgroundSize = '0 100%'
+      font.dom.style.transform = 'translateY(0)'
     }
     this.curFontNum = 0
   }

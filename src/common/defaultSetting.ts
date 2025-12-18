@@ -76,6 +76,10 @@ const defaultSetting: LX.AppSetting = {
   'playDetail.style.fontSize': 140,
   'playDetail.style.align': 'center',
   'playDetail.isDelayScroll': true,
+  'playDetail.lyricScrollPosition': 'top',
+  'playDetail.lyricTextLiftEffect': false,
+  'playDetail.lyricTextLiftEffectUnlocked': false,
+  'playDetail.lyricTextLiftEffectOffset': 6,
 
   'desktopLyric.enable': false,
   'desktopLyric.isLock': false,

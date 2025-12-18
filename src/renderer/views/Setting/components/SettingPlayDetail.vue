@@ -8,9 +8,24 @@ dd
   .gap-top
     base-checkbox(id="setting_play_detail_lyric_progress_enable" :model-value="appSetting['playDetail.isShowLyricProgressSetting']" :label="$t('setting__play_detail_lyric_progress')" @update:model-value="updateSetting({'playDetail.isShowLyricProgressSetting': $event})")
 
-  //- 🎁 流光溢彩设置（通过关于页面的彩蛋解锁）
+  //- 流光溢彩设置（通过关于页面的彩蛋解锁）
   .gap-top(v-if="showFlowingGlowSetting")
     base-checkbox(id="setting_play_detail_flowing_glow_background" :model-value="appSetting['player.flowingGlowBackground']" :label="$t('setting__play_detail_flowing_glow_background')" @update:model-value="updateSetting({'player.flowingGlowBackground': $event})")
+
+  //- 逐字歌词上移效果设置（通过关于页面的 ikun0014 彩蛋解锁）
+  .gap-top(v-if="showLyricTextLiftSetting")
+    base-checkbox(id="setting_play_detail_lyric_text_lift" :model-value="appSetting['playDetail.lyricTextLiftEffect']" :label="$t('setting__play_detail_lyric_text_lift')" @update:model-value="updateSetting({'playDetail.lyricTextLiftEffect': $event})")
+  .gap-top(v-if="showLyricTextLiftSetting && appSetting['playDetail.lyricTextLiftEffect']")
+    h3 {{ $t('setting__play_detail_lyric_text_lift_offset') }}
+    .slider-row
+      base-slider-bar(
+        :class="$style.slider"
+        :value="appSetting['playDetail.lyricTextLiftEffectOffset']"
+        :min="1"
+        :max="20"
+        @change="updateSetting({'playDetail.lyricTextLiftEffectOffset': Math.round($event)})"
+      )
+      span.gap-left {{ (appSetting['playDetail.lyricTextLiftEffectOffset'] / 100).toFixed(2) }}em
 
 dd
   h3#play_detail_align {{ $t('setting__play_detail_align') }}
@@ -28,14 +43,25 @@ import { appSetting, updateSetting } from '@renderer/store/setting'
 export default {
   name: 'SettingPlayDetail',
   setup() {
-    // 🎁 从持久化设置中读取彩蛋解锁状态
+    // 从持久化设置中读取彩蛋解锁状态
     const showFlowingGlowSetting = computed(() => appSetting['player.flowingGlowUnlocked'])
+    const showLyricTextLiftSetting = computed(() => appSetting['playDetail.lyricTextLiftEffectUnlocked'])
 
     return {
       appSetting,
       updateSetting,
       showFlowingGlowSetting,
+      showLyricTextLiftSetting,
     }
   },
 }
 </script>
+
+<style lang="less" module>
+@import '@renderer/assets/styles/layout.less';
+
+.slider {
+  flex: 1;
+  width: 150px;
+}
+</style>

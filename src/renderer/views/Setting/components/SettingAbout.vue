@@ -37,7 +37,7 @@ dd
     | By:&nbsp;
     span.credit-name(@click="handleCreditClick('落雪无痕')") 落雪无痕
     span.credit-separator  &&
-    span.credit-name(@click="handleCreditClick('ikun0014')") ikun0014
+    span.credit-name.easter-egg-trigger(@click="handleCreditClick('ikun0014')") ikun0014
     span.credit-separator  &&
     span.credit-name.easter-egg-trigger(@click="handleCreditClick('Toskysun')") Toskysun
 </template>
@@ -55,37 +55,51 @@ export default {
       isShowPact.value = true
     }
 
-    // 🎁 彩蛋：快速点击 Toskysun 5次解锁隐藏的流光溢彩功能
-    const clickCount = ref(0)
-    const lastClickTime = ref(0)
+    // 彩蛋点击状态管理
+    const clickCounts = ref({
+      Toskysun: 0,
+      ikun0014: 0,
+    })
+    const lastClickTimes = ref({
+      Toskysun: 0,
+      ikun0014: 0,
+    })
     const CLICK_THRESHOLD = 5 // 需要点击的次数
     const TIME_WINDOW = 500 // 时间窗口（毫秒）
 
     const handleCreditClick = (name) => {
       const now = Date.now()
-      const timeDiff = now - lastClickTime.value
 
-      // 如果点击间隔超过时间窗口，重置计数
-      if (timeDiff > TIME_WINDOW) {
-        clickCount.value = 1
-      } else {
-        clickCount.value++
+      // 只处理有彩蛋的名字
+      if (name === 'Toskysun' || name === 'ikun0014') {
+        const timeDiff = now - lastClickTimes.value[name]
+
+        // 如果点击间隔超过时间窗口，重置计数
+        if (timeDiff > TIME_WINDOW) {
+          clickCounts.value[name] = 1
+        } else {
+          clickCounts.value[name]++
+        }
+
+        lastClickTimes.value[name] = now
+
+        // Toskysun 彩蛋：解锁流光溢彩
+        if (name === 'Toskysun' && clickCounts.value[name] >= CLICK_THRESHOLD) {
+          updateSetting({ 'player.flowingGlowUnlocked': true })
+          console.log('🎉 流光溢彩彩蛋已解锁！请前往播放详细页设置查看')
+          clickCounts.value[name] = 0
+        }
+
+        // ikun0014 彩蛋：解锁逐字歌词上移效果
+        if (name === 'ikun0014' && clickCounts.value[name] >= CLICK_THRESHOLD) {
+          updateSetting({ 'playDetail.lyricTextLiftEffectUnlocked': true })
+          console.log('🎉 逐字歌词上移效果彩蛋已解锁！请前往播放详细页设置查看')
+          clickCounts.value[name] = 0
+        }
+
+        // 调试信息
+        console.log(`[Easter Egg] ${name} clicked, count: ${clickCounts.value[name]}/${CLICK_THRESHOLD}`)
       }
-
-      lastClickTime.value = now
-
-      // 只有点击 Toskysun 才有效
-      if (name === 'Toskysun' && clickCount.value >= CLICK_THRESHOLD) {
-        // 解锁成功，将状态保存到设置中
-        updateSetting({ 'player.flowingGlowUnlocked': true })
-        console.log('🎉 彩蛋已解锁！请前往播放详细页设置查看流光溢彩选项')
-
-        // 重置计数，防止重复触发
-        clickCount.value = 0
-      }
-
-      // 调试信息
-      console.log(`[Easter Egg] ${name} clicked, count: ${clickCount.value}/${CLICK_THRESHOLD}`)
     }
 
     return {
