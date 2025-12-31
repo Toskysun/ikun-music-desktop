@@ -151,9 +151,11 @@ export const createTray = () => {
   // tray.setToolTip('IKUN Music')
   // createMenu()
   tray.setIgnoreDoubleClickEvents(true)
-  tray.on('click', () => {
-    showMainWindow()
-  })
+  if (isWin) {
+    tray.on('click', () => {
+      showMainWindow()
+    })
+  }
 }
 
 export const destroyTray = () => {
