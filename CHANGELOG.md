@@ -6,6 +6,21 @@ Project versioning adheres to [Semantic Versioning](http://semver.org/).
 Commit convention is based on [Conventional Commits](http://conventionalcommits.org).
 Change log format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.3.0-fix.5](https://github.com/ikunshare/ikun-music-desktop/compare/v3.3.0-fix.4...v3.3.0-fix.5) - 2026-01-13
+
+我们很高兴地宣布新项目 Any Listen 的桌面版已发布，目前已支持列表跟随本地文件自动更新、加载并播放WebDAV上的歌曲等功能，更多功能仍在积极开发中，桌面版与Web版将同步更新。
+对于有播放本地音乐或播放服务器上音乐需求的人可以试试，若遇到任何问题可以发 issue 反馈。
+
+### 优化
+
+- 优化托盘图标行为：在非 Windows 系统中，点击托盘图标时不再显示主窗口
+
+
+### 修复
+
+- 修复音量条在调整音量时实际音量与显示的数值不一致的问题（#2606）
+- 修复某些情况下搜索框的搜索按钮布局错位的问题（#2622）
+
 ## [3.3.0-fix.4](https://github.com/ikunshare/ikun-music-desktop/compare/v2.11.0...v3.3.0-fix.4) - 2026-01-13
 
 我们很高兴地宣布新项目 Any Listen 的桌面版已发布，目前已支持列表跟随本地文件自动更新、加载并播放WebDAV上的歌曲等功能，更多功能仍在积极开发中，桌面版与Web版将同步更新。
