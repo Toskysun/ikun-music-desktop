@@ -67,7 +67,7 @@ jobs:
       - name: Upload Artifact Setup x64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-x64-Setup
+          name: ikun-music-desktop-x64-Setup
           path: build/*-x64-Setup.exe
 
       - name: Build Package 7z x64
@@ -75,7 +75,7 @@ jobs:
       - name: Upload Artifact 7z x64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-win_x64-green
+          name: ikun-music-desktop-win_x64-green
           path: build/*win_x64-green.7z
 
       - name: Build Package Setup arm64
@@ -83,7 +83,7 @@ jobs:
       - name: Upload Artifact Setup arm64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-arm64-Setup
+          name: ikun-music-desktop-arm64-Setup
           path: build/*-arm64-Setup.exe
 
       - name: Build Package 7z arm64
@@ -91,7 +91,7 @@ jobs:
       - name: Upload Artifact 7z arm64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-win_arm64-green
+          name: ikun-music-desktop-win_arm64-green
           path: build/*win_arm64-green.7z
 
       - name: Generate file MD5
@@ -140,7 +140,7 @@ jobs:
       - name: Upload Artifact win7 Setup x64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-win7_x64-Setup
+          name: ikun-music-desktop-win7_x64-Setup
           path: build/*win7_x64-Setup.exe
 
       - name: Build Package win7 7z x64
@@ -148,7 +148,7 @@ jobs:
       - name: Upload Artifact win7 7z x64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-win7_x64-green
+          name: ikun-music-desktop-win7_x64-green
           path: build/*win7_x64-green.7z
 
       - name: Build Package win7 7z x86
@@ -156,7 +156,7 @@ jobs:
       - name: Upload Artifact win7 7z x86
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-win7_x86-green
+          name: ikun-music-desktop-win7_x86-green
           path: build/*win7_x86-green.7z
 
       - name: Generate file MD5
@@ -197,14 +197,14 @@ jobs:
       - name: Upload Artifact dmg
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-mac-dmg
+          name: ikun-music-desktop-mac-dmg
           path: |
             build/*.dmg
             !build/*-arm64.dmg
       - name: Upload Artifact dmg
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-mac-dmg-arm64
+          name: ikun-music-desktop-mac-dmg-arm64
           path: build/*-arm64.dmg
 
       - name: Generate file MD5
@@ -242,7 +242,7 @@ jobs:
       - name: Upload Artifact deb amd64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-deb-amd64
+          name: ikun-music-desktop-deb-amd64
           path: build/*_amd64.deb
 
       - name: Build Package deb arm64
@@ -250,7 +250,7 @@ jobs:
       - name: Upload Artifact deb arm64
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-deb-arm64
+          name: ikun-music-desktop-deb-arm64
           path: build/*_arm64.deb
 
       - name: Build Package deb armv7l
@@ -258,7 +258,7 @@ jobs:
       - name: Upload Artifact deb armv7l
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-deb-armv7l
+          name: ikun-music-desktop-deb-armv7l
           path: build/*_armv7l.deb
 
       - name: Build Package x64 appImage
@@ -266,7 +266,7 @@ jobs:
       - name: Upload Artifact x64 appImage
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-x64-appImage
+          name: ikun-music-desktop-x64-appImage
           path: build/*_x64.AppImage
 
       - name: Build Package x64 rpm
@@ -274,7 +274,7 @@ jobs:
       - name: Upload Artifact x64 rpm
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-x64-rpm
+          name: ikun-music-desktop-x64-rpm
           path: build/*.x64.rpm
 
       - name: Build Package x64 pacman
@@ -282,7 +282,7 @@ jobs:
       - name: Upload Artifact x64 pacman
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-desktop-x64-pacman
+          name: ikun-music-desktop-x64-pacman
           path: build/*_x64.pacman
 
       - name: Generate file MD5
