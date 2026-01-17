@@ -30,13 +30,7 @@
             @update:model-value="saveVolumeIsMute($event)"
           />
         </div>
-        <base-slider-bar
-          :class="$style.slider"
-          :value="volume"
-          :min="0"
-          :max="1"
-          @change="handleUpdateVolume"
-        />
+        <base-slider-bar :class="$style.slider" :value="volume" :min="0" :max="1" :step="0.01" @change="handleUpdateVolume" />
       </div>
     </template>
   </material-popup-btn>
@@ -56,7 +50,7 @@ const handleToggleMute = () => {
 }
 
 const handleWheel = (event) => {
-  window.app_event.setVolume(Math.round(volume.value * 100 + (-event.deltaY / 100) * 2) / 100)
+  window.app_event.setVolume(Math.round(volume.value * 100 + (-event.deltaY / 100 * 2)) / 100)
 }
 
 const handleUpdateVolume = (val) => {
@@ -74,6 +68,7 @@ const icon = computed(() => {
           ? '#icon-volume-medium-outline'
           : '#icon-volume-high-outline'
 })
+
 </script>
 
 <style lang="less" module>
@@ -99,12 +94,12 @@ const icon = computed(() => {
 
   svg {
     transition: opacity @transition-fast;
-    opacity: 0.6;
+    opacity: .6;
     filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.2));
   }
   &:hover {
     svg {
-      opacity: 0.9;
+      opacity: .9;
     }
   }
   &:active {
@@ -136,4 +131,5 @@ const icon = computed(() => {
 .slider {
   width: 100%;
 }
+
 </style>

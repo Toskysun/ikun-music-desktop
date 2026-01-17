@@ -9,13 +9,6 @@ const version_bak = JSON.stringify(version, null, 2)
 const parseChangelog = require('changelog-parser')
 const changelogPath = jp('../../CHANGELOG.md')
 
-// const md_renderer = markdownStr => new (require('markdown-it'))({
-//   html: true,
-//   linkify: true,
-//   typographer: true,
-//   breaks: true,
-// }).render(markdownStr)
-
 const getPrevVer = () =>
   parseChangelog(changelogPath).then((res) => {
     if (!res.versions.length) throw new Error('CHANGELOG 无法解析到版本号')
@@ -25,11 +18,12 @@ const getPrevVer = () =>
 const updateChangeLog = async (newVerNum, newChangeLog) => {
   let changeLog = fs.readFileSync(changelogPath, 'utf-8')
   const prevVer = await getPrevVer()
-  const log = `## [${newVerNum}](${pkg.repository.url.replace(/^git\+(http.+)\.git$/, '$1')}/compare/v${prevVer}...v${newVerNum}) - ${formatTime()}\n\n${newChangeLog}`
-  fs.writeFileSync(changelogPath, changeLog.replace(/(## \[(?:\d+\.))/, log + '\n$1'), 'utf-8')
+  const log = `## [${newVerNum}](${pkg.repository.url.replace(
+    /^git\+(http.+)\.git$/,
+    '$1'
+  )}/compare/v${prevVer}...v${newVerNum}) - ${formatTime()}\n\n${newChangeLog}`
+  fs.writeFileSync(changelogPath, changeLog.replace(/(## [?0.1.1]?)/, log + '\n$1'), 'utf-8')
 }
-
-// const renderChangeLog = md => md_renderer(md)
 
 module.exports = async (newVerNum) => {
   if (!newVerNum) {
@@ -38,7 +32,6 @@ module.exports = async (newVerNum) => {
     newVerNum = verArr.join('.')
   }
   const newMDChangeLog = fs.readFileSync(jp('../changeLog.md'), 'utf-8')
-  // const newChangeLog = renderChangeLog(newMDChangeLog)
   version.history.unshift({
     version: version.version,
     desc: version.desc,
@@ -58,6 +51,5 @@ module.exports = async (newVerNum) => {
   return {
     pkg_bak,
     version_bak,
-    // changeLog: newChangeLog,
   }
 }

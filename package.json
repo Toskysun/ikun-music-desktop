@@ -1,6 +1,6 @@
 {
   "name": "ikun-music-desktop",
-  "version": "3.4.2",
+  "version": "3.4.3",
   "description": "一个免费的音乐查找助手",
   "main": "./dist/main.js",
   "scripts": {
@@ -61,13 +61,14 @@
     "build:renderer": "cross-env NODE_ENV=production webpack --config build-config/renderer/webpack.config.prod.js --progress",
     "build:renderer-lyric": "cross-env NODE_ENV=production webpack --config build-config/renderer-lyric/webpack.config.prod.js --progress",
     "build:renderer-scripts": "cross-env NODE_ENV=production webpack --config build-config/renderer-scripts/webpack.config.prod.js --progress",
-    "patch:node-gyp": "node build-config/patch-node-gyp-vs2026.js",
-    "postinstall": "electron-builder install-app-deps && node build-config/patch-node-gyp-vs2026.js",
+    "lint": "eslint --ext .ts,.js,.vue -f node_modules/eslint-formatter-friendly src",
+    "lint:fix": "eslint --ext .ts,.js,.vue -f node_modules/eslint-formatter-friendly --fix src",
+    "postinstall": "electron-builder install-app-deps",
     "dp": "cross-env ELECTRON_GET_USE_PROXY=true GLOBAL_AGENT_HTTPS_PROXY=http://127.0.0.1:2081 npm run pack",
     "up": "cross-env ELECTRON_GET_USE_PROXY=true GLOBAL_AGENT_HTTPS_PROXY=http://127.0.0.1:2081 npm i"
   },
   "browserslist": [
-    "Electron 39.0.0"
+    "Electron 22.3.0"
   ],
   "engines": {
     "node": ">= 22",
@@ -89,7 +90,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Toskysun/ikun-music-desktop.git"
+    "url": "git+https://github.com/ikunshare/ikun-music-desktop.git"
   },
   "keywords": [
     "music-player",
@@ -97,48 +98,47 @@
     "vuejs3"
   ],
   "author": {
-    "name": "Toskysun",
-    "email": "3kddyys@gmail.com"
+    "name": "ikunshare",
+    "email": "ikun0014@qq.com"
   },
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Toskysun/ikun-music-desktop/issues"
+    "url": "https://github.com/ikunshare/ikun-music-desktop/issues"
   },
-  "homepage": "https://github.com/Toskysun/ikun-music-desktop#readme",
+  "homepage": "https://github.com/ikunshare/ikun-music-desktop#readme",
   "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@babel/eslint-parser": "^7.28.4",
+    "@babel/core": "^7.28.5",
+    "@babel/eslint-parser": "^7.28.5",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
     "@babel/plugin-transform-class-properties": "^7.27.1",
     "@babel/plugin-transform-modules-umd": "^7.27.1",
-    "@babel/plugin-transform-runtime": "^7.28.3",
-    "@babel/preset-env": "^7.28.3",
-    "@babel/preset-typescript": "^7.27.1",
+    "@babel/plugin-transform-runtime": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
     "@babel/runtime": "^7.28.4",
-    "@tsconfig/recommended": "^1.0.10",
+    "@tsconfig/recommended": "^1.0.13",
     "@types/better-sqlite3": "^7.6.13",
     "@types/needle": "^3.3.0",
-    "@types/node": "^20.19.17",
+    "@types/node": "^20.19.25",
     "@types/tunnel": "^0.0.7",
     "@types/ws": "8.5.4",
-    "@vue/language-plugin-pug": "^3.1.0",
+    "@vue/language-plugin-pug": "^3.1.8",
     "babel-loader": "^10.0.0",
-    "browserslist": "^4.26.2",
+    "browserslist": "^4.28.1",
     "chalk": "^4.1.2",
     "changelog-parser": "^3.0.1",
     "copy-webpack-plugin": "^13.0.1",
-    "core-js": "^3.45.1",
-    "cross-env": "^10.0.0",
+    "core-js": "^3.47.0",
+    "cross-env": "^10.1.0",
     "css-loader": "^7.1.2",
-    "css-minimizer-webpack-plugin": "^7.0.0",
+    "css-minimizer-webpack-plugin": "^7.0.4",
     "del": "^6.1.1",
-    "electron": "^39.0.0",
-    "electron-builder": "^26.0.12",
+    "electron": "37.6.1",
+    "electron-builder": "^26.3.6",
     "electron-debug": "^3.2.0",
     "electron-devtools-installer": "github:lyswhut/electron-devtools-installer#64596d615c1fc891eefd8aef1dfcb2c87aaadf03",
-    "electron-rebuild": "^3.2.9",
-    "electron-to-chromium": "^1.5.227",
-    "electron-updater": "^6.6.2",
+    "electron-to-chromium": "^1.5.267",
+    "electron-updater": "6.7.3",
     "eslint": "^8.57.1",
     "eslint-config-standard": "^17.1.0",
     "eslint-config-standard-with-typescript": "^43.0.1",
@@ -147,8 +147,8 @@
     "eslint-plugin-vue": "^9.33.0",
     "eslint-plugin-vue-pug": "^0.6.2",
     "eslint-webpack-plugin": "^4.2.0",
-    "html-webpack-plugin": "^5.6.4",
-    "less": "^4.4.1",
+    "html-webpack-plugin": "^5.6.5",
+    "less": "^4.4.2",
     "less-loader": "^12.3.0",
     "mini-css-extract-plugin": "^2.9.4",
     "node-loader": "^2.1.0",
@@ -157,29 +157,27 @@
     "postcss-pxtorem": "^6.1.0",
     "pug": "^3.0.3",
     "pug-plain-loader": "^1.1.0",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.2",
     "spinnies": "github:lyswhut/spinnies#233305c58694aa3b053e3ab9af9049993f918b9d",
     "svg-sprite-loader": "^6.0.11",
     "svg-transform-loader": "^2.0.13",
     "svgo-loader": "^4.0.0",
-    "terser": "^5.44.0",
-    "terser-webpack-plugin": "^5.3.14",
+    "terser": "^5.44.1",
+    "terser-webpack-plugin": "^5.3.16",
     "tree-kill": "^1.2.2",
     "ts-loader": "^9.5.4",
-    "typescript": "5.9.2",
+    "typescript": "5.9.3",
     "vue-eslint-parser": "^9.4.3",
     "vue-loader": "^17.4.2",
-    "webpack": "^5.101.3",
+    "webpack": "^5.103.0",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "5.2.2",
     "webpack-hot-middleware": "github:lyswhut/webpack-hot-middleware#329c4375134b89d39da23a56a94db651247c74a1",
     "webpack-merge": "^6.0.1"
   },
   "dependencies": {
-    "@applemusic-like-lyrics/core": "^0.1.3",
-    "@applemusic-like-lyrics/vue": "^0.1.5",
     "@simonwep/pickr": "^1.9.1",
-    "better-sqlite3": "12.4.1",
+    "better-sqlite3": "^12.5.0",
     "bufferutil": "^4.0.9",
     "comlink": "~4.3.1",
     "crypto-js": "^4.2.0",
@@ -190,18 +188,16 @@
     "jschardet": "^3.1.4",
     "long": "^5.3.2",
     "message2call": "^0.1.3",
-    "music-metadata": "^11.9.0",
+    "music-metadata": "^11.10.3",
     "needle": "github:lyswhut/needle#93299ac841b7e9a9f82ca7279b88aaaeda404060",
     "node-id3": "^0.2.9",
     "sortablejs": "^1.15.6",
     "tunnel": "^0.0.6",
+    "undici": "^7.16.0",
     "utf-8-validate": "^6.0.5",
-    "vue": "^3.5.0",
-    "vue-router": "^4.5.1",
+    "vue": "~3.3.13",
+    "vue-router": "~4.5.1",
     "ws": "^8.18.3"
-  },
-  "optionalDependencies": {
-    "dmg-license": "^1.0.11"
   },
   "overrides": {
     "got": "^11",
@@ -222,6 +218,5 @@
     "node-gyp-build": "latest",
     "micromatch": "latest",
     "http-cache-semantics": "latest"
-  },
-  "packageManager": "pnpm@9.15.5+sha512.845196026aab1cc3f098a0474b64dfbab2afe7a1b4e91dd86895d8e4aa32a7a6d03049e2d0ad770bbe4de023a7122fb68c1a1d6e0d033c7076085f9d5d4800d4"
+  }
 }
