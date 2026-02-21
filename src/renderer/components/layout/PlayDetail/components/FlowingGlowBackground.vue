@@ -8,7 +8,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from '@common/utils/vueTools'
 import {
   AbstractBaseRenderer,
   BackgroundRender,
-  EplorRenderer,
+  MeshGradientRenderer,
 } from '@applemusic-like-lyrics/core'
 
 // WebGL检测函数（增强版 - 提供详细诊断信息）
@@ -157,7 +157,7 @@ export default {
 
       try {
         // 创建背景渲染器实例
-        bgRenderRef.value = BackgroundRender.new(EplorRenderer)
+        bgRenderRef.value = BackgroundRender.new(MeshGradientRenderer)
         const canvasEl = bgRenderRef.value.getElement()
 
         // 设置画布样式
